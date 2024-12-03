@@ -1,32 +1,53 @@
 {
-  "name": "E-commerce Microservices Dev Environment",
-  "dockerComposeFile": "docker-compose.yml",
-  "service": "workspace",
-  "workspaceFolder": "/workspace",
-  "settings": {
-    "terminal.integrated.shell.linux": "/bin/bash",
-    "editor.formatOnSave": true,
-    "prisma.enable": true,
-    "tailwindCSS.emmetCompletions": true
+  "name": "Docker from Dockerfile",
+  "build": {
+    "dockerfile": "Dockerfile",
+    "context": "."
   },
-  "extensions": [
-    "ms-python.python",
-    "ms-azuretools.vscode-docker",
-    "dbaeumer.vscode-eslint",
-    "rebornix.Ruby",
-    "rust-lang.rust-analyzer",
-    "Prisma.prisma",
-    "ms-vscode.vscode-typescript-next",
-    "esbenp.prettier-vscode",
-    "eamodio.gitlens",
-    "mhutchie.git-graph",
-    "oderwat.indent-rainbow",
-    "ms-kubernetes-tools.vscode-kubernetes-tools",
-    "redhat.vscode-yaml",
-    "bradlc.vscode-tailwindcss",
-    "mui.material-ui-snippets"
-  ],
-  "forwardPorts": [8000, 3000, 5000, 8080],
-  "remoteUser": "vscode",
-  "postCreateCommand": "sudo apt-get update && sudo apt-get install -y libpq-dev"
+  "workspaceFolder": "/workspace/${localWorkspaceFolderBasename}",
+  "remoteEnv": {
+    "LOCAL_WORKSPACE_FOLDER": "${localWorkspaceFolder}"
+  },
+  "features": {
+    "ghcr.io/devcontainers/features/docker-outside-of-docker:1": {
+      "version": "latest",
+      "enableNonRootDocker": "true",
+      "moby": "false"
+    }
+  },
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "ms-python.python",
+        "ms-azuretools.vscode-docker",
+        "dbaeumer.vscode-eslint",
+        "rebornix.Ruby",
+        "rust-lang.rust-analyzer",
+        "Prisma.prisma",
+        "ms-vscode.vscode-typescript-next",
+        "esbenp.prettier-vscode",
+        "eamodio.gitlens",
+        "mhutchie.git-graph",
+        "oderwat.indent-rainbow",
+        "ms-kubernetes-tools.vscode-kubernetes-tools",
+        "redhat.vscode-yaml",
+        "bradlc.vscode-tailwindcss",
+        "mui.material-ui-snippets"
+      ],
+      "forwardPorts": [
+        8000,
+        3000,
+        5000,
+        8080,
+        5432,
+        5672,
+        15672
+      ],
+      "mounts": [
+        "source=/var/run/docker.sock,target=/var/run/docker.sock,type=bind",
+        "source=${localWorkspaceFolder},target=/workspace,type=bind,consistency=cached"
+      ],
+      "postCreateCommand": "sudo apt-get update && sudo apt-get install -y libpq-dev"
+    }
+  }
 }
