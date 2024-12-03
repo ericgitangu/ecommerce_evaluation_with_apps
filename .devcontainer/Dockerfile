@@ -1,6 +1,6 @@
 # .devcontainer/Dockerfile
 
-FROM mcr.microsoft.com/devcontainers/base:bullseye
+FROM mcr.microsoft.com/devcontainers/base:bookworm
 
 # Install Docker CLI
 RUN apt-get update && apt-get install -y \
@@ -15,13 +15,8 @@ RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - && \
     apt-get install -y nodejs
 
 # Install Python >= 3.11
-RUN apt-get update && apt-get install -y software-properties-common && \
-    add-apt-repository ppa:deadsnakes/ppa && \
-    apt-get install -y python3.11 python3.11-dev python3.11-distutils
+RUN apt-get update && apt-get install -y python3.11 python3.11-dev python3-pip python3-venv
 RUN update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.11 1
-
-# Install pip for Python 3.11
-RUN curl -sS https://bootstrap.pypa.io/get-pip.py | python3.11
 
 # Install Ruby and Bundler
 RUN apt-get install -y ruby-full
@@ -29,7 +24,7 @@ RUN gem install bundler
 
 # Install Rust
 RUN curl https://sh.rustup.rs -sSf | sh -s -- -y
-ENV PATH="$HOME/.cargo/bin:${PATH}"
+ENV PATH="/root/.cargo/bin:${PATH}"
 
 # Install PostgreSQL client (psql)
 RUN apt-get install -y postgresql-client
