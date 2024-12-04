@@ -2,6 +2,10 @@
 
 FROM mcr.microsoft.com/devcontainers/base:bookworm
 
+# Update image
+RUN apt-get update && apt-get install -y build-essential libssl-dev pkg-config
+
+
 # Install Docker CLI
 RUN apt-get update && apt-get install -y \
     docker.io \
@@ -34,6 +38,17 @@ RUN apt-get install -y git curl
 
 # Install Vite globally
 RUN npm install -g vite
+
+# Install Rust with rustup
+RUN curl https://sh.rustup.rs -sSf | sh -s -- -y
+ENV PATH="/root/.cargo/bin:${PATH}"
+
+# Rust tooling.
+RUN cargo install cargo-edit # For managing dependencies in Cargo.toml
+RUN cargo install cargo-watch # For watching and rebuilding code on changes
+
+# Install rust-analyzer
+RUN rustup component add rust-analyzer
 
 # Clean up
 RUN apt-get clean && rm -rf /var/lib/apt/lists/*
