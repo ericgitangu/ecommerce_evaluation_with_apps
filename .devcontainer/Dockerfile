@@ -40,15 +40,22 @@ RUN apt-get install -y git curl
 RUN npm install -g vite
 
 # Install Rust with rustup
-RUN curl https://sh.rustup.rs -sSf | sh -s -- -y
+# Install Rust and related tools
+RUN curl https://sh.rustup.rs -sSf | sh -s -- -y \
+    && echo "source $HOME/.cargo/env" >> /root/.bashrc \
+    && source $HOME/.cargo/env \
+    && rustup update stable \
+    && rustup component add rustfmt clippy rust-analyzer \
+    && cargo install cargo-edit cargo-watch
+
+# Update rust-analyzer binary
+RUN rustup update && rustup component add rust-analyzer rustfmt clippy
+
+# Ensure rust binaries are available
+echo "source $HOME/.cargo/env" >> ~/.bashrc
+
+# Add the binaries to the path.
 ENV PATH="/root/.cargo/bin:${PATH}"
-
-# Rust tooling.
-RUN cargo install cargo-edit # For managing dependencies in Cargo.toml
-RUN cargo install cargo-watch # For watching and rebuilding code on changes
-
-# Install rust-analyzer
-RUN rustup component add rust-analyzer
 
 # Clean up
 RUN apt-get clean && rm -rf /var/lib/apt/lists/*
