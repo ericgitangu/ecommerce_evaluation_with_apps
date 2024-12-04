@@ -1,45 +1,51 @@
-# .devcontainer/Dockerfile
-
 FROM mcr.microsoft.com/devcontainers/base:bookworm
 
-# Update image and install essential dependencies
+# Use bash
+SHELL ["/bin/bash", "-c"]
+
+# Install prerequisites
 RUN apt-get update && apt-get install -y \
     build-essential libssl-dev pkg-config \
     python3.11 python3.11-dev python3-pip python3-venv \
-    ruby-full postgresql-client git curl docker.io \
+    ruby-full postgresql-client git curl docker.io zsh \
     && rm -rf /var/lib/apt/lists/*
 
-# Set Docker binary path
-ENV PATH="/usr/bin/docker:${PATH}"
-
 # Install Node.js >= 20
-RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - && \
-    apt-get install -y nodejs
+RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
+    && apt-get install -y nodejs
 
-# Install Ruby and Bundler
+# Install Ruby Bundler
 RUN gem install bundler
 
-# Install Rust and related tools for the non-root user
+# Switch to vscode user for installing rust & related tools
 USER vscode
+ENV HOME="/home/vscode"
+WORKDIR /home/vscode
 
+# Install Rust
 RUN curl https://sh.rustup.rs -sSf | sh -s -- -y \
-    && echo 'export PATH="$HOME/.cargo/bin:$PATH"' >> ~/.bashrc \
-    && . ~/.bashrc \
+    && . "$HOME/.cargo/env" \
+    && rustup default stable \
     && rustup update stable \
     && rustup component add rustfmt clippy rust-analyzer \
     && cargo install cargo-edit cargo-watch
 
-# Add Rust binaries to the PATH
-ENV PATH="/home/vscode/.cargo/bin:${PATH}"
+# Set ENV so cargo, rustc are always on PATH
+ENV PATH="$HOME/.cargo/bin:${PATH}"
 
-# Install Vite globally
+# Ensure PATH is loaded in interactive shells
+RUN echo 'export PATH="$HOME/.cargo/bin:$PATH"' >> ~/.bashrc \
+    && echo 'export PATH="$HOME/.cargo/bin:$PATH"' >> ~/.zshrc
+
+USER root
+# Install Vite globally as root
 RUN npm install -g vite
 
-# Switch back to root to perform cleanup
-USER root
-
-# Clean up unnecessary files to reduce image size
+# Clean up
 RUN apt-get clean && rm -rf /var/lib/apt/lists/*
 
-# Final verification step for Rust and Vite (optional)
+# Switch back to vscode
+USER vscode
+
+# Verify versions
 RUN rustc --version && cargo --version && vite --version
