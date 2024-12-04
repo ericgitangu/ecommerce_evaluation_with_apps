@@ -10,6 +10,19 @@ RUN apt-get update && apt-get install -y \
     ruby-full postgresql-client git curl docker.io zsh \
     && rm -rf /var/lib/apt/lists/*
 
+# Install kubectl
+RUN curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl" \
+    && chmod +x kubectl \
+    && mv kubectl /usr/local/bin/
+
+# Install Kind
+RUN curl -Lo kind https://kind.sigs.k8s.io/dl/v0.20.0/kind-linux-amd64 \
+    && chmod +x kind \
+    && mv kind /usr/local/bin/
+
+# Download and install Helm
+RUN curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
+
 # Install Node.js >= 20
 RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
     && apt-get install -y nodejs
