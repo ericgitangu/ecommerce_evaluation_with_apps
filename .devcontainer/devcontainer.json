@@ -1,20 +1,16 @@
 {
-  "name": "Docker from Dockerfile",
+  "name": "Ecommerce Dev Container",
   "build": {
     "dockerfile": "Dockerfile",
     "context": "."
   },
   "workspaceFolder": "/workspace/${localWorkspaceFolderBasename}",
-  "remoteEnv": {
-    "LOCAL_WORKSPACE_FOLDER": "${localWorkspaceFolder}"
-  },
   "features": {
-    "ghcr.io/devcontainers/features/docker-outside-of-docker:1": {
-      "version": "latest",
-      "enableNonRootDocker": "true",
-      "moby": "false"
-    }
+   "ghcr.io/devcontainers/features/docker-in-docker:2": {}
   },
+  "runArgs": [
+    "--privileged"
+  ],
   "customizations": {
     "vscode": {
       "extensions": [
@@ -34,21 +30,19 @@
         "redhat.vscode-yaml",
         "bradlc.vscode-tailwindcss",
         "mui.material-ui-snippets"
-      ],
-      "forwardPorts": [
-        8000,
-        3000,
-        5000,
-        8080,
-        5432,
-        5672,
-        15672
-      ],
-      "mounts": [
-        "source=/var/run/docker.sock,target=/var/run/docker.sock,type=bind",
-        "source=${localWorkspaceFolder},target=/workspace,type=bind,consistency=cached"
-      ],
-      "postCreateCommand": "sudo apt-get update && sudo apt-get install -y libpq-dev"
+      ]
     }
-  }
+  },
+  "forwardPorts": [
+    8000,
+    3000,
+    5000,
+    8080,
+    5432,
+    5672,
+    15672
+  ],
+  "remoteUser": "vscode",
+  "containerUser": "vscode",
+  "postCreateCommand": "sudo apt-get update && sudo apt-get install -y libpq-dev"
 }
