@@ -1,0 +1,17 @@
+{
+  "dashboard": {
+    "title": "Flask Services",
+    "panels": [
+      {
+        "type": "graph",
+        "title": "API Hits",
+        "targets": [
+          {
+            "expr": "api_hits",
+            "legendFormat": "{{method}} {{endpoint}}"
+          }
+        ]
+      }
+    ]
+  }
+}

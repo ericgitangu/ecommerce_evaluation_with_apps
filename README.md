@@ -53,6 +53,9 @@ To establish a microservices-based platform that is scalable, maintainable, and 
 
 **Architecture Diagram:**
 
+bash
+
+```
 +----------------------+ +-----------------------+
 | Clients | | GitHub Codespaces |
 | (Browsers, Mobile) | | Dev Container |
@@ -81,6 +84,7 @@ v
 | Service Mesh |
 | (Istio) |
 +--------------+
+```
 
 ## Key Components:
 

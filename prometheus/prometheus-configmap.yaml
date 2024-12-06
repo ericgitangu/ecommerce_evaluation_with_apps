@@ -1,0 +1,19 @@
+# ConfigMap for Prometheus scrape configurations
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: prometheus-config
+  namespace: monitoring
+data:
+  prometheus.yml: |
+    global:
+      scrape_interval: 15s
+
+    scrape_configs:
+    - job_name: 'flask-services'
+      static_configs:
+        - targets:
+          - 'order-service.monitoring.svc.cluster.local:8003'
+          - 'catalog-service.monitoring.svc.cluster.local:8003'
+          - 'search-service.monitoring.svc.cluster.local:8003'
+          - 'frontend-service.monitoring.svc.cluster.local:8003'

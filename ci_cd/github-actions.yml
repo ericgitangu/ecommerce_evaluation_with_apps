@@ -1,0 +1,61 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build-and-scan:
+    runs-on: ubuntu-latest
+    steps:
+    # Step 1: Checkout the code
+    - name: Checkout Code
+      uses: actions/checkout@v3
+
+    # Step 2: Log in to Docker Hub
+    - name: Log in to Docker Hub
+      uses: docker/login-action@v2
+      with:
+        username: ${{ secrets.DOCKER_USERNAME }}
+        password: ${{ secrets.DOCKER_PASSWORD }}
+
+    # Step 3: Build Docker images
+    - name: Build Docker Images
+      run: |
+        for service in order catalog search; do
+          docker build -t egitangu/$service-service:latest -f flask-services/$service/Dockerfile flask-services/$service
+        done
+
+    # Step 4: Push Docker images
+    - name: Push Docker Images
+      run: |
+        for service in order catalog search; do
+          docker push egitangu/$service-service:latest
+        done
+
+    # Step 5: Scan images with Trivy
+    - name: Vulnerability Scan
+      uses: aquasecurity/trivy-action@master
+      with:
+        image-ref: egitangu/order-service:latest
+
+  deploy:
+    needs: build-and-scan
+    runs-on: ubuntu-latest
+    steps:
+    # Step 1: Checkout Code
+    - name: Checkout Code
+      uses: actions/checkout@v3
+
+    # Step 2: Install Helm
+    - name: Install Helm
+      run: curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
+
+    # Step 3: Prebuild Hook for deploy-helm.sh
+    - name: Deploy Services with Helm
+      run: ./scripts/deploy-helm.sh
+
+    # Step 4: Prebuild Hook for deploy-kubectl.sh (Optional)
+    - name: Deploy Services with kubectl
+      run: ./scripts/deploy-kubectl.sh
