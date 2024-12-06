@@ -1,7 +1,7 @@
 apiVersion: autoscaling/v2
 kind: HorizontalPodAutoscaler
 metadata:
-  name: frontend-hpa
+  name: frontend-service-hpa
   namespace: ecommerce
 spec:
   scaleTargetRef:
@@ -9,11 +9,17 @@ spec:
     kind: Deployment
     name: frontend-service
   minReplicas: 2
-  maxReplicas: 10
+  maxReplicas: 5
   metrics:
-  - type: Resource
-    resource:
-      name: cpu
+    - type: Resource
+      resource:
+        name: cpu
       target:
         type: Utilization
         averageUtilization: 50
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageUtilization: 70

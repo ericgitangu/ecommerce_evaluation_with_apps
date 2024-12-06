@@ -4,7 +4,7 @@ metadata:
   name: order-service
   namespace: ecommerce
 spec:
-  replicas: 3
+  replicas: 2
   selector:
     matchLabels:
       app: order-service
@@ -14,19 +14,49 @@ spec:
         app: order-service
     spec:
       containers:
-      - name: order-service
-        image: egitangu/order-service:latest
-        ports:
-        - containerPort: 8001
-        resources:
-          limits:
-            cpu: "500m"
-            memory: "512Mi"
-          requests:
-            cpu: "200m"
-            memory: "256Mi"
-        env:
-        - name: DATABASE_URL
-          value: postgresql://postgres:mysecretpassword@postgres/orders_db
-        - name: RABBITMQ_HOST
-          value: rabbitmq
+        - name: order-service
+          image: egitangu/order-service:latest
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 5003
+            initialDelaySeconds: 15
+            periodSeconds: 10
+            timeoutSeconds: 5
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 5003
+            initialDelaySeconds: 15
+            periodSeconds: 10
+          resources:
+            requests:
+              memory: "128Mi"
+              cpu: "100m"
+            limits:
+              memory: "256Mi"
+              cpu: "500m"
+          env:
+            - name: RABBITMQ_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: service-secrets
+                  key: rabbitmq-username
+            - name: RABBITMQ_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: service-secrets
+                  key: rabbitmq-password
+            - name: POSTGRES_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: service-secrets
+                  key: postgres-username
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: service-secrets
+                  key: postgres-password
+      volumes:
+        - name: logs-and-metrics
+          emptyDir: {}

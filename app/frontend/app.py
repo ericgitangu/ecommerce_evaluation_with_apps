@@ -1,10 +1,60 @@
+from flask import Flask, jsonify
+import pika
+import logging
+from prometheus_client import start_http_server, Counter, Histogram, register_metrics
+import time
+import os
+import sys
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from utils.logger import setup_logger
 
-from flask import Flask
 app = Flask(__name__)
 
+# Metrics
+API_HITS = Counter('api_hits', 'API Hits', ['method', 'endpoint'])
+PROCESSING_TIME = Histogram('processing_time_seconds', 'Processing Time', ['endpoint'])
+
+# RabbitMQ configuration
+RABBITMQ_HOST = os.getenv("RABBITMQ_HOST", "rabbitmq")
+QUEUE_NAME = "orders"
+
+# Logging setup
+logger = setup_logger('frontend')
+
+def poll_rabbitmq():
+    try:
+        connection = pika.BlockingConnection(pika.ConnectionParameters(host=RABBITMQ_HOST))
+        channel = connection.channel()
+        channel.queue_declare(queue=QUEUE_NAME)
+        for method_frame, properties, body in channel.consume(QUEUE_NAME, auto_ack=True):
+            logger.info(f"Received message: {body.decode('utf-8')}")
+            channel.basic_ack(method_frame.delivery_tag)
+    except Exception as e:
+        logger.error(f"Error polling RabbitMQ: {e}")
+
 @app.route("/")
-def hello():
-    return "Frontend Service is Running!"
+def home():
+    start_time = time.time()
+    API_HITS.labels(method='GET', endpoint='/').inc()
+    PROCESSING_TIME.labels(endpoint='/').observe(time.time() - start_time)
+    logger.info("Frontend Service Running!")
+    return jsonify({"message": "Frontend Service Running!"}), 200
+
+@app.route("/metrics")
+def metrics():
+    from prometheus_client import generate_latest
+    logger.info("Metrics request received for frontend service")
+    return generate_latest()
+
+@app.route("/health")
+def health():
+    logger.info("Health check request received for frontend service")
+    return jsonify({"status": "healthy"}), 200
+
+# Prometheus metrics registration
+register_metrics(app, app_version="v1.0.0", app_config="production")
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=80)
+    start_http_server(8003)  # Expose metrics
+    poll_rabbitmq()
+    app.run(host="0.0.0.0", port=5004)

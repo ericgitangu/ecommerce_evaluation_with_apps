@@ -1,0 +1,42 @@
+[
+    {
+        "id": 1,
+        "query": "Best laptops under $1000"
+    },
+    {
+        "id": 2,
+        "query": "Affordable smartphones"
+    },
+    {
+        "id": 3,
+        "query": "Wireless headphones"
+    },
+    {
+        "id": 4,
+        "query": "High-resolution monitors"
+    },
+    {
+        "id": 5,
+        "query": "Mechanical keyboards"
+    },
+    {
+        "id": 6,
+        "query": "Gaming mice"
+    },
+    {
+        "id": 7,
+        "query": "Color printers"
+    },
+    {
+        "id": 8,
+        "query": "WiFi routers"
+    },
+    {
+        "id": 9,
+        "query": "Ergonomic desks"
+    },
+    {
+        "id": 10,
+        "query": "Office chairs"
+    }
+]

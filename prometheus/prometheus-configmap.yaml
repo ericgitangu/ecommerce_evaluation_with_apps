@@ -13,7 +13,7 @@ data:
     - job_name: 'flask-services'
       static_configs:
         - targets:
-          - 'order-service.monitoring.svc.cluster.local:8003'
-          - 'catalog-service.monitoring.svc.cluster.local:8003'
-          - 'search-service.monitoring.svc.cluster.local:8003'
-          - 'frontend-service.monitoring.svc.cluster.local:8003'
+          - 'order-service.monitoring.svc.cluster.local:5003'
+          - 'catalog-service.monitoring.svc.cluster.local:5001'
+          - 'search-service.monitoring.svc.cluster.local:5002'
+          - 'frontend-service.monitoring.svc.cluster.local:5004'

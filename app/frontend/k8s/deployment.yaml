@@ -14,17 +14,32 @@ spec:
         app: frontend-service
     spec:
       containers:
-      - name: frontend-service
-        image: egitangu/frontend-service:latest
-        ports:
-        - containerPort: 8004
-        resources:
-          limits:
-            cpu: "500m"
-            memory: "128Mi"
-          requests:
-            cpu: "200m"
-            memory: "64Mi"
-        env:
-        - name: RABBITMQ_HOST
-          value: rabbitmq
+        - name: frontend-service
+          image: egitangu/frontend-service:latest
+          ports:
+            - containerPort: 5004
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 5004
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 5004
+            initialDelaySeconds: 10
+            periodSeconds: 20
+          resources:
+            limits:
+              cpu: "500m"
+              memory: "128Mi"
+            requests:
+              cpu: "200m"
+              memory: "64Mi"
+          env:
+            - name: RABBITMQ_HOST
+              value: rabbitmq
+      volumes:
+        - name: logs-and-metrics
+          emptyDir: {}

@@ -1,2 +1,7 @@
-
-flask==2.2.2
+wheel>=0.40.0
+setuptools>=65.5.1
+Flask==2.2.3; python_version >= "3.7"
+elasticsearch==8.11.0; python_version >= "3.7"
+prometheus-client==0.16.0; python_version >= "3.7"
+flask-prometheus-metrics==1.0.0; python_version >= "3.7"
+python-json-logger==2.0.7; python_version >= "3.7"

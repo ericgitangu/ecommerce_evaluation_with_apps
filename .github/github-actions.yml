@@ -1,0 +1,74 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Create k8s Kind Cluster
+        uses: helm/kind-action@v1.5.0
+
+      - name: Test with Kind
+        run: |
+          chmod +x ./scripts/test-local.sh
+          ./scripts/test-local.sh
+  build-and-scan:
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      # Step 1: Checkout the code
+      - name: Checkout Code
+        uses: actions/checkout@v3
+
+      # Step 2: Log in to Docker Hub
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v2
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      # Step 3: Build Docker images
+      - name: Build Docker Images
+        run: |
+          for service in order catalog search frontend; do
+            docker build -t egitangu/$service-service:latest -f app/$service/Dockerfile app/$service
+          done
+
+      # Step 4: Push Docker images
+      - name: Push Docker Images
+        run: |
+          for service in order catalog search frontend; do
+            docker push egitangu/$service-service:latest
+          done
+
+      # Step 5: Scan images with Trivy
+      - name: Vulnerability Scan
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: egitangu/order-service:latest
+
+  deploy:
+    needs: build-and-scan
+    runs-on: ubuntu-latest
+    steps:
+      # Step 1: Checkout Code
+      - name: Checkout Code
+        uses: actions/checkout@v3
+
+      # Step 2: Install Helm
+      - name: Install Helm
+        run: curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
+
+      # Step 3: Deploy Third Party Services with Helm
+      - name: Deploy Third Party Services with Helm
+        run: chmod +x ./scripts/deploy-helm.sh && ./scripts/deploy-helm.sh
+
+      # Step 4: Deploy Services with kubectl
+      - name: Deploy Services with kubectl
+        run: chmod +x ./scripts/deploy-kubectl.sh && ./scripts/deploy-kubectl.sh

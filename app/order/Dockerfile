@@ -1,4 +1,3 @@
-
 FROM python:3.9-slim
 
 WORKDIR /app
@@ -8,6 +7,6 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . /app/
 
-EXPOSE 8001
+EXPOSE 5003
 
-CMD ["python", "app.py"]
+CMD ["python3", "app.py"]

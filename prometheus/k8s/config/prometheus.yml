@@ -1,0 +1,18 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+scrape_configs:
+  - job_name: "flask-services"
+    metrics_path: /metrics
+    static_configs:
+      - targets:
+          - catalog-service:5001
+          - search-service:5002
+          - order-service:5003
+          - frontend-service:5004
+  - job_name: "rabbitmq"
+    metrics_path: /metrics
+    static_configs:
+      - targets:
+          - rabbitmq-service:15672

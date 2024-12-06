@@ -1,0 +1,52 @@
+[
+    {
+        "id": 1,
+        "name": "Laptop",
+        "price": 1000
+    },
+    {
+        "id": 2,
+        "name": "Smartphone",
+        "price": 700
+    },
+    {
+        "id": 3,
+        "name": "Headphones",
+        "price": 200
+    },
+    {
+        "id": 4,
+        "name": "Monitor",
+        "price": 400
+    },
+    {
+        "id": 5,
+        "name": "Keyboard",
+        "price": 100
+    },
+    {
+        "id": 6,
+        "name": "Mouse",
+        "price": 50
+    },
+    {
+        "id": 7,
+        "name": "Printer",
+        "price": 300
+    },
+    {
+        "id": 8,
+        "name": "Router",
+        "price": 120
+    },
+    {
+        "id": 9,
+        "name": "Desk",
+        "price": 150
+    },
+    {
+        "id": 10,
+        "name": "Chair",
+        "price": 80
+    }
+]

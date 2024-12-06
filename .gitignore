@@ -1,5 +1,7 @@
 # Logs
 logs
+logs_and_metrics/*
+!logs_and_metrics/.gitkeep
 *.log
 npm-debug.log*
 yarn-debug.log*
@@ -129,3 +131,12 @@ dist
 .yarn/build-state.yml
 .yarn/install-state.gz
 .pnp.*
+
+#python
+__pycache__/
+venv/
+.pytest_cache/
+
+
+#flask
+.flaskenv

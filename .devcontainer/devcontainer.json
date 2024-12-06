@@ -6,7 +6,7 @@
   },
   "workspaceFolder": "/workspace/${localWorkspaceFolderBasename}",
   "features": {
-   "ghcr.io/devcontainers/features/docker-in-docker:2": {}
+    "ghcr.io/devcontainers/features/docker-in-docker:2": {}
   },
   "runArgs": [
     "--privileged"
@@ -40,7 +40,9 @@
     8080,
     5432,
     5672,
-    15672
+    15672,
+    80,
+    9090
   ],
   "remoteUser": "vscode",
   "containerUser": "vscode",

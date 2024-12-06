@@ -5,7 +5,7 @@ metadata:
   namespace: ecommerce
 spec:
   ports:
-  - port: 8004
-    targetPort: 8004
+    - port: 5004
+      targetPort: 5004
   selector:
     app: frontend-service
