@@ -1,14 +1,43 @@
 {
   "dashboard": {
-    "title": "Flask Services",
+    "title": "Services Dashboard",
     "panels": [
       {
-        "type": "graph",
-        "title": "API Hits",
+        "title": "Service Health Status",
+        "type": "stat",
         "targets": [
           {
-            "expr": "api_hits",
-            "legendFormat": "{{method}} {{endpoint}}"
+            "expr": "up{job=\"flask-services\"}"
+          }
+        ]
+      },
+      {
+        "title": "Request Rate",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "rate(http_requests_total[5m])",
+            "legendFormat": "{{service}} - {{endpoint}}"
+          }
+        ]
+      },
+      {
+        "title": "Response Times",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "rate(http_request_duration_seconds_sum[5m]) / rate(http_request_duration_seconds_count[5m])",
+            "legendFormat": "{{service}}"
+          }
+        ]
+      },
+      {
+        "title": "Error Rate",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "rate(http_requests_total{status=~\"5..\"}[5m])",
+            "legendFormat": "{{service}}"
           }
         ]
       }

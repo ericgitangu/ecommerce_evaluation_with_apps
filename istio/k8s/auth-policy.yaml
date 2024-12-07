@@ -1,0 +1,26 @@
+apiVersion: security.istio.io/v1beta1
+kind: AuthorizationPolicy
+metadata:
+  name: ecommerce-auth
+  namespace: ecommerce
+spec:
+  selector:
+    matchLabels:
+      app: frontend-service
+  rules:
+  - from:
+    - source:
+        principals: ["cluster.local/ns/ecommerce/sa/frontend-service"]
+    to:
+    - operation:
+        methods: ["GET"]
+        paths: ["/", "/health"]
+---
+apiVersion: security.istio.io/v1beta1
+kind: PeerAuthentication
+metadata:
+  name: default
+  namespace: ecommerce
+spec:
+  mtls:
+    mode: STRICT

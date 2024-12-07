@@ -107,15 +107,35 @@ This project implements an e-commerce system using a microservices architecture.
 - **Integrations**:
   - Elasticsearch for search indexing.
 
-### 5. Nginx Ingress
-- **Purpose**: Acts as an ingress controller for routing external traffic to services
-- **Endpoints**:
-  - `/`: Routes to Frontend Service
-  - `/catalog`: Routes to Catalog Service
-  - `/search`: Routes to Search Service
-  - `/order`: Routes to Order Service
-- **Internal Service Name**: nginx-ingress.ecommerce.svc.cluster.local
-- **Port**: 80
+### 5. Service Mesh Security
+
+#### Istio Integration
+- Replaces Nginx Ingress with Istio Service Mesh
+- Provides mTLS encryption between services
+- Implements fine-grained RBAC
+- Manages traffic routing and load balancing
+
+#### Security Features
+1. **mTLS Authentication**
+   - Automatic encryption between services
+   - Certificate management handled by Istio
+   - STRICT mode enforced across namespace
+
+2. **Authorization Policies**
+   - Frontend Service: Public access to / and /health
+   - Catalog Service: Only accessible by Frontend
+   - Order Service: Protected endpoints with method restrictions
+   - Search Service: Controlled access from Frontend
+
+3. **Traffic Management**
+   - Route definitions via Virtual Services
+   - Load balancing across service instances
+   - Circuit breaking and fault injection capabilities
+
+#### Accessing Services
+- All external traffic routes through Istio Ingress Gateway
+- Internal service-to-service communication secured by mTLS
+- Original ports and endpoints remain unchanged
 
 ## Deployment
 

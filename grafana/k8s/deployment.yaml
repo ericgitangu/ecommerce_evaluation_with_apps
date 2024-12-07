@@ -15,25 +15,34 @@ spec:
         app: grafana
     spec:
       containers:
-      - name: grafana
-        image: grafana/grafana:latest
-        resources:
-          limits:
-            cpu: "500m"
-            memory: "512Mi"
-          requests:
-            cpu: "200m"
-            memory: "256Mi"
-        env:
-        - name: GF_SECURITY_ADMIN_PASSWORD
-          value: "admin"
-        ports:
-        - containerPort: 3000
-        volumeMounts:
-        - name: grafana-dashboards
-          mountPath: /var/lib/grafana/dashboards
+        - name: grafana
+          image: grafana/grafana:latest
+          resources:
+            limits:
+              cpu: "200m"
+              memory: "256Mi"
+            requests:
+              cpu: "100m"
+              memory: "128Mi"
+          env:
+            - name: GF_SECURITY_ADMIN_PASSWORD
+              value: "admin"
+          ports:
+            - containerPort: 3000
+          volumeMounts:
+            - name: grafana-dashboards
+              mountPath: /var/lib/grafana/dashboards
+            - name: grafana-datasources
+              mountPath: /etc/grafana/provisioning/datasources
+            - name: grafana-dashboard-provisioning
+              mountPath: /etc/grafana/provisioning/dashboards
       volumes:
-      - name: grafana-dashboards
-        configMap:
-          name: grafana-dashboard
-
+        - name: grafana-dashboards
+          configMap:
+            name: grafana-dashboard
+        - name: grafana-datasources
+          configMap:
+            name: grafana-datasources
+        - name: grafana-dashboard-provisioning
+          configMap:
+            name: grafana-dashboard-provisioning

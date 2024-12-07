@@ -19,11 +19,13 @@ spec:
         image: rabbitmq:3-management
         resources:
           limits:
-            cpu: "1000m"
-            memory: "1Gi"
+            cpu: "300m"
+            memory: "384Mi"
           requests:
-            cpu: "500m"
-            memory: "512Mi"
+            cpu: "150m"
+            memory: "256Mi"
         ports:
         - containerPort: 5672
+          name: amqp
         - containerPort: 15672
+          name: management
