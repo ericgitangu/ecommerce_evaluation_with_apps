@@ -21,13 +21,11 @@ jobs:
           sudo mv ./kind /usr/local/bin/kind
           kind version
 
-      # Step 3: Install Istioctl and Istio
+      # Step 3: Install Istioctl
       - name: Install Istioctl
         run: |
           curl -L https://istio.io/downloadIstioctl | sh -
           sudo mv $HOME/.istioctl/bin/istioctl /usr/local/bin/istioctl
-          istioctl version
-          istioctl install --set profile=demo -y
 
       # Step 4: Install Kubectl
       - name: Install Kubectl
@@ -94,13 +92,11 @@ jobs:
           sudo mv ./kind /usr/local/bin/kind
           kind version
 
-      # Step 3: Install Istioctl and Istio (if needed for deploy environment)
+      # Step 3: Install Istioctl
       - name: Install Istioctl
         run: |
           curl -L https://istio.io/downloadIstioctl | sh -
           sudo mv $HOME/.istioctl/bin/istioctl /usr/local/bin/istioctl
-          istioctl version
-          istioctl install --set profile=demo -y
 
       # Step 4: Install Kubectl (for deploy environment)
       - name: Install Kubectl
