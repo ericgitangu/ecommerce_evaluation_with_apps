@@ -4,11 +4,6 @@ metadata:
   namespace: istio-system
 spec:
   profile: demo
-  addonComponents:
-    telemetry:
-      enabled: false
-    tracing:
-      enabled: false
   meshConfig:
     enableAutoMtls: true
     defaultConfig:
