@@ -142,7 +142,7 @@ else
   echo "No validation issues found for Istio configuration."
 fi
 
- Instead of using istioctl install for CRDs
+# Istioctl install for CRDs
 echo "Installing Istio CRDs..."
 kubectl apply -f https://raw.githubusercontent.com/istio/istio/master/manifests/charts/base/crds/crd-all.yaml
 
