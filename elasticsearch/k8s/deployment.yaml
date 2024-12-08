@@ -24,5 +24,10 @@ spec:
             requests:
               cpu: "250m"
               memory: "512Mi"
+          env:
+            - name: ES_JAVA_OPTS
+              value: "-Xms512m -Xmx512m"
+            - name: discovery.type
+              value: single-node
           ports:
             - containerPort: 9200

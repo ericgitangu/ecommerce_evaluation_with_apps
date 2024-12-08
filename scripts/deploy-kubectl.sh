@@ -176,14 +176,15 @@ kubectl wait --for=condition=available --timeout=180s deployment --all -n monito
 
 echo "Waiting for logging deployments..."
 kubectl wait --for=condition=available --timeout=180s deployment --all -n logging || true
-# Add specific wait for Elasticsearch
-kubectl rollout status deployment/elasticsearch -n logging --timeout=300s || true
+
+echo "Waiting for Elasticsearch deployment..."
+kubectl rollout status deployment/elasticsearch --timeout=300s -n logging || true
 
 echo "Waiting for messaging deployments..."
 kubectl wait --for=condition=available --timeout=180s deployment --all -n messaging || true
 
 echo "Waiting for database deployments..."
-kubectl wait --for=condition=available --timeout=180s deployment --all -n database || true
+kubectl wait --for=condition=available --timeout=300s deployment --all -n database || true
 
 echo "Waiting for application deployments..."
 kubectl wait --for=condition=available --timeout=180s deployment --all -n ecommerce || true
@@ -191,6 +192,9 @@ kubectl wait --for=condition=available --timeout=180s deployment --all -n ecomme
 # Display status of all pods
 echo "Current pod status:"
 kubectl get pods -A
+kubectl get services -A
+kubectl get ingress -A
+kubectl get deployments -A
 
 # Display pod resource allocations and usage
 echo "Displaying pod resource allocations..."
@@ -205,11 +209,11 @@ fi
 
 # Set up port forwarding
 echo "Setting up port forwarding..."
-kubectl port-forward -n monitoring svc/prometheus-service 9090:9090 &
-kubectl port-forward -n monitoring svc/grafana-service 3000:3000 &
-kubectl port-forward -n logging svc/elasticsearch-service 9200:9200 &
-kubectl port-forward -n messaging svc/rabbitmq-service 5672:5672 15672:15672 &
-kubectl port-forward -n database svc/postgres-service 5432:5432 &
+kubectl port-forward -n monitoring svc/prometheus 9090:9090 &
+kubectl port-forward -n monitoring svc/grafana 3000:3000 &
+kubectl port-forward -n logging svc/elasticsearch 9200:9200 &
+kubectl port-forward -n messaging svc/rabbitmq 5672:5672 15672:15672 &
+kubectl port-forward -n database svc/postgres 5432:5432 &
 kubectl port-forward -n istio-system svc/istio-ingressgateway 8080:80 &
 
 echo "Services are available at:"
