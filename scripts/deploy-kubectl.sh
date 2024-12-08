@@ -62,93 +62,18 @@ docker pull docker.io/istio/proxyv2:1.24.1
 kind load docker-image docker.io/istio/pilot:1.24.1 --name "${CLUSTER_NAME}"
 kind load docker-image docker.io/istio/proxyv2:1.24.1 --name "${CLUSTER_NAME}"
 
-# Create Istio service accounts with retries
-echo "Creating Istio namespace and service accounts..."
-for i in {1..3}; do
-  kubectl create namespace istio-system 2>/dev/null || true
-  if kubectl create serviceaccount istiod -n istio-system; then
-    break
-  else
-    if [ $i -eq 3 ]; then
-      echo "Failed to create istiod service account after 3 attempts"
-      exit 1
-    fi
-    echo "Attempt $i failed, waiting 10s..."
-    sleep 10
-  fi
-done
-
-for i in {1..3}; do
-  if kubectl create serviceaccount istio-ingressgateway-service-account -n istio-system; then
-    break
-  else
-    if [ $i -eq 3 ]; then
-      echo "Failed to create ingress gateway service account after 3 attempts"
-      exit 1
-    fi
-    echo "Attempt $i failed, waiting 10s..."
-    sleep 10
-  fi
-done
-
-# Create required ConfigMaps and Secrets with retries
-echo "Creating initial Istio ConfigMaps and Secrets..."
-for resource in istio-ca-root-cert istio; do
-  for i in {1..3}; do
-    if kubectl create configmap "$resource" -n istio-system; then
-      break
-    else
-      if [ $i -eq 3 ]; then
-        echo "Failed to create $resource configmap after 3 attempts"
-        exit 1
-      fi
-      echo "Attempt $i failed, waiting 10s..."
-      sleep 10
-    fi
-  done
-done
-
-for resource in istiod-tls istio-ingressgateway-certs; do
-  for i in {1..3}; do
-    if kubectl create secret generic "$resource" -n istio-system; then
-      break
-    else
-      if [ $i -eq 3 ]; then
-        echo "Failed to create $resource secret after 3 attempts"
-        exit 1
-      fi
-      echo "Attempt $i failed, waiting 10s..."
-      sleep 10
-    fi
-  done
-done
-
 # Wait before health checks
 echo "Waiting for resources to be ready..."
 sleep 30
 
-# Verify cluster health
-echo "Verifying cluster health..."
-kubectl cluster-info
-kubectl get nodes
-kubectl get pods -A
-
 # Verify Istio configuration before installation
 echo "Analyzing Istio configuration..."
 if ! istioctl analyze istio/k8s/deployment.yaml --use-kube=false; then
-  echo "Istio configuration validation failed. See errors above."
+  echo "Istio configuration validation failed. Halting..."
   exit 1
 else
   echo "No validation issues found for Istio configuration."
 fi
-
-# Istioctl install for CRDs
-echo "Installing Istio CRDs..."
-kubectl apply -f https://github.com/istio/istio/blob/master/manifests/charts/base/files/crd-all.gen.yaml
-
-# Wait for CRDs to be established
-echo "Waiting for Istio CRDs to be established..."
-kubectl wait --for=condition=established --all crd --timeout=300s
 
 # Now install Istio with full configuration
 echo "Installing Istio..."
