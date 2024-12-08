@@ -20,15 +20,18 @@ spec:
             httpGet:
               path: /health
               port: 5003
-            initialDelaySeconds: 15
+            initialDelaySeconds: 30
             periodSeconds: 10
             timeoutSeconds: 5
+            failureThreshold: 6
           livenessProbe:
             httpGet:
               path: /health
               port: 5003
-            initialDelaySeconds: 15
-            periodSeconds: 10
+            initialDelaySeconds: 60
+            periodSeconds: 20
+            timeoutSeconds: 5
+            failureThreshold: 3
           resources:
             requests:
               memory: "64Mi"

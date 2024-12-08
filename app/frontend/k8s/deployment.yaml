@@ -22,14 +22,18 @@ spec:
             httpGet:
               path: /health
               port: 5004
-            initialDelaySeconds: 5
+            initialDelaySeconds: 30
             periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 6
           livenessProbe:
             httpGet:
               path: /health
               port: 5004
-            initialDelaySeconds: 10
+            initialDelaySeconds: 60
             periodSeconds: 20
+            timeoutSeconds: 5
+            failureThreshold: 3
           resources:
             limits:
               memory: "256Mi"
@@ -39,7 +43,7 @@ spec:
               cpu: "100m"
           env:
             - name: RABBITMQ_HOST
-              value: rabbitmq
+              value: rabbitmq.messaging.svc.cluster.local
       volumes:
         - name: logs-and-metrics
           emptyDir: {}

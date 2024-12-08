@@ -66,24 +66,40 @@ echo "Deploying PostgreSQL..."
 kubectl apply -f postgres/k8s/deployment.yaml -n database
 kubectl apply -f postgres/k8s/service.yaml -n database
 echo "Waiting for PostgreSQL..."
-kubectl wait --for=condition=available --timeout=300s deployment -l app=postgres -n database || true
+if ! kubectl get deployment postgres -n database >/dev/null 2>&1; then
+    echo "PostgreSQL deployment not found. Current deployments in database namespace:"
+    kubectl get deployments -n database
+    exit 1
+fi
+kubectl rollout status deployment/postgres -n database --timeout=300s
 
 # 3. Deploy Message Broker
 echo "Deploying RabbitMQ..."
 kubectl apply -f rabbitmq/k8s/deployment.yaml -n messaging
 kubectl apply -f rabbitmq/k8s/service.yaml -n messaging
 echo "Waiting for RabbitMQ..."
-kubectl wait --for=condition=available --timeout=300s deployment -l app=rabbitmq -n messaging || true
+if ! kubectl get deployment rabbitmq -n messaging >/dev/null 2>&1; then
+    echo "RabbitMQ deployment not found. Current deployments in messaging namespace:"
+    kubectl get deployments -n messaging
+    exit 1
+fi
+kubectl rollout status deployment/rabbitmq -n messaging --timeout=300s
 
 # 4. Deploy Application Services
 echo "Deploying application services..."
 for service in frontend catalog order search; do
-  echo "Deploying $service service..."
-  kubectl apply -f app/$service/k8s/deployment.yaml
-  kubectl apply -f app/$service/k8s/service.yaml
-  kubectl apply -f app/$service/k8s/hpa.yaml
-  echo "Waiting for $service service..."
-  kubectl wait --for=condition=available --timeout=180s deployment/$service-service -n ecommerce || true
+    echo "Deploying $service service..."
+    kubectl apply -f app/$service/k8s/deployment.yaml
+    kubectl apply -f app/$service/k8s/service.yaml
+    kubectl apply -f app/$service/k8s/hpa.yaml
+
+    echo "Waiting for $service service..."
+    if ! kubectl get deployment "${service}-service" -n ecommerce >/dev/null 2>&1; then
+        echo "${service}-service deployment not found. Current deployments in ecommerce namespace:"
+        kubectl get deployments -n ecommerce
+        exit 1
+    fi
+    kubectl rollout status deployment/${service}-service -n ecommerce --timeout=180s
 done
 
 # Apply Authorization Policies
