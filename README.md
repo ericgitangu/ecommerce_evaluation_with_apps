@@ -189,7 +189,7 @@ This project implements an e-commerce system using a microservices architecture.
     Run Locally:
 
     ```bash
-      flask run
+      ./scripts/test-local.sh
     ```
 
 ## Service Endpoints and Ports
@@ -267,9 +267,10 @@ This project implements an e-commerce system using a microservices architecture.
 
 ## **CI/CD Workflow**
 
-    - Build: Docker images for each service.
-    - Scan: Vulnerability scanning using Trivy.
-    - Deploy: Automate deployments using GitHub Actions.
+    1. Test: Run a local test with Kind
+    2. Build: Docker images for each service.
+    3. Scan: Vulnerability scanning using Trivy.
+    4. Deploy: Automate deployments using GitHub Actions.
 
 ## **License**
 This project is licensed under the MIT License. See LICENSE for details.
