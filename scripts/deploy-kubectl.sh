@@ -77,7 +77,7 @@ fi
 
 # Now install Istio with full configuration
 echo "Installing Istio..."
-if ! istioctl install -f istio/k8s/deployment.yaml --set profile=demo --set tracing.enabled=false --set telemetry.enabled=false -y; then
+if ! istioctl install -f istio/k8s/deployment.yaml --set profile=demo -y; then
   echo "Istio installation failed. Running diagnostics..."
   echo "Configuration validation:"
   istioctl analyze -n istio-system
