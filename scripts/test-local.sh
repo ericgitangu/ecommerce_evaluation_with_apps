@@ -1,79 +1,136 @@
 #!/bin/bash
 
+# Color definitions
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
+NC='\033[0m' # No Color
+TICK="${GREEN}✓${NC}"
+CROSS="${RED}✗${NC}"
+
+# Print with color
+log_info() { echo -e "${BLUE}INFO:${NC} $1"; }
+log_success() { echo -e "${GREEN}SUCCESS:${NC} $1"; }
+log_warning() { echo -e "${YELLOW}WARNING:${NC} $1"; }
+log_error() { echo -e "${RED}ERROR:${NC} $1"; }
+
 # Stop on error
 set -e
 
 # Cleanup function
 cleanup() {
-    echo "Performing cleanup..."
+    log_info "Performing cleanup..."
     
     # Check if cluster exists before attempting cleanup
     if kubectl cluster-info >/dev/null 2>&1; then
-        # Cleanup existing Helm installations
-        echo "Cleaning up existing Helm installations..."
-        helm uninstall prometheus-operator -n monitoring --ignore-not-found
-        helm uninstall elasticsearch -n logging --ignore-not-found
-        helm uninstall rabbitmq -n messaging --ignore-not-found
-        helm uninstall postgres -n database --ignore-not-found
-        helm uninstall grafana -n monitoring --ignore-not-found
-        helm uninstall istio-system -n istio-system --ignore-not-found
+        log_info "Cleaning up existing Helm installations..."
+        for app in prometheus-operator elasticsearch rabbitmq postgres grafana istio-system; do
+            if helm uninstall $app -n ${app#*-} --ignore-not-found; then
+                log_success "Uninstalled $app ${TICK}"
+            else
+                log_warning "Failed to uninstall $app ${CROSS}"
+            fi
+        done
 
-        # Clean up resources in all namespaces
-        echo "Cleaning up resources in all namespaces..."
+        log_info "Cleaning up resources in all namespaces..."
         for ns in ecommerce database monitoring logging messaging istio-system; do
-            kubectl delete pvc --all -n $ns --ignore-not-found
-            kubectl delete configmap --all -n $ns --ignore-not-found
-            kubectl delete secret --all -n $ns --ignore-not-found
+            for resource in pvc configmap secret; do
+                if kubectl delete $resource --all -n $ns --ignore-not-found; then
+                    log_success "Cleaned up ${resource}s in $ns ${TICK}"
+                else
+                    log_warning "Failed to clean up ${resource}s in $ns ${CROSS}"
+                fi
+            done
         done
     else
-        echo "No active cluster found, skipping Kubernetes cleanup..."
+        log_warning "No active cluster found, skipping Kubernetes cleanup..."
     fi
 
-    # Delete existing cluster
-    echo "Deleting Kind cluster..."
-    kind delete cluster --name egitangu-local-cluster || true
+    log_info "Deleting Kind cluster..."
+    if kind delete cluster --name egitangu-local-cluster; then
+        log_success "Kind cluster deleted ${TICK}"
+    else
+        log_warning "Kind cluster deletion skipped (might not exist) ${CROSS}"
+    fi
 }
 
 # Run cleanup
 cleanup
 
 # Create new cluster
-echo "Creating Kind cluster..."
+log_info "Creating Kind cluster..."
 if [ ! -f "kind/k8s/kind-config.yaml" ]; then
-    echo "Error: kind/k8s/kind-config.yaml not found"
+    log_error "kind/k8s/kind-config.yaml not found ${CROSS}"
     ls -la .
     exit 1
 fi
 
-kind create cluster \
-  --config kind/k8s/kind-config.yaml \
-  --name egitangu-local-cluster \
-  --image kindest/node:v1.28.0 \
-  --wait 60s
+if kind create cluster \
+    --config kind/k8s/kind-config.yaml \
+    --name egitangu-local-cluster \
+    --image kindest/node:v1.28.0 \
+    --wait 60s; then
+    log_success "Kind cluster created successfully ${TICK}"
+else
+    log_error "Failed to create Kind cluster ${CROSS}"
+    exit 1
+fi
 
 # Verify cluster is ready
-echo "Verifying cluster is ready..."
-kubectl cluster-info --context kind-egitangu-local-cluster
-kubectl wait --for=condition=ready node --all --timeout=60s
+log_info "Verifying cluster is ready..."
+if kubectl cluster-info --context kind-egitangu-local-cluster; then
+    log_success "Cluster info verified ${TICK}"
+else
+    log_error "Cluster verification failed ${CROSS}"
+    exit 1
+fi
 
-echo "Loading Docker images into Kind..."
+if kubectl wait --for=condition=ready node --all --timeout=60s; then
+    log_success "All nodes are ready ${TICK}"
+else
+    log_error "Nodes not ready within timeout ${CROSS}"
+    exit 1
+fi
+
+log_info "Loading Docker images into Kind..."
 for service in order catalog search frontend; do
-    docker build -t egitangu/$service-service:latest -f app/$service/Dockerfile app/$service
-    kind load docker-image egitangu/$service-service:latest --name egitangu-local-cluster
+    log_info "Building $service service..."
+    if docker build -t egitangu/$service-service:latest -f app/$service/Dockerfile app/$service; then
+        log_success "Built $service image ${TICK}"
+        if kind load docker-image egitangu/$service-service:latest --name egitangu-local-cluster; then
+            log_success "Loaded $service image into cluster ${TICK}"
+        else
+            log_error "Failed to load $service image ${CROSS}"
+            exit 1
+        fi
+    else
+        log_error "Failed to build $service image ${CROSS}"
+        exit 1
+    fi
 done
 
-echo "Deploying services..."
+log_info "Deploying services..."
 ./scripts/deploy-helm.sh
 ./scripts/deploy-kubectl.sh
 
-echo "Waiting for all pods to be ready..."
-kubectl wait --for=condition=ready pod --all -n ecommerce --timeout=300s
+log_info "Waiting for all pods to be ready..."
+if kubectl wait --for=condition=ready pod --all -n ecommerce --timeout=300s; then
+    log_success "All pods are ready ${TICK}"
+else
+    log_error "Not all pods are ready ${CROSS}"
+fi
 
-echo "Testing endpoints..."
-curl -f http://localhost/health || echo "Frontend health check failed"
-curl -f http://localhost/catalog/health || echo "Catalog health check failed"
-curl -f http://localhost/search/health || echo "Search health check failed"
-curl -f http://localhost/order/health || echo "Order health check failed"
+log_info "Testing endpoints..."
+for service in frontend catalog search order; do
+    if curl -f http://localhost/${service#frontend/}/health; then
+        log_success "$service health check passed ${TICK}"
+    else
+        log_error "$service health check failed ${CROSS}"
+    fi
+done
 
 # Set trap to cleanup on script exit
 trap cleanup EXIT
+
+log_success "Setup complete! ${TICK}"
