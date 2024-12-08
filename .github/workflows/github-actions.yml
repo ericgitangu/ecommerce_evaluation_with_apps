@@ -25,6 +25,7 @@ jobs:
         run: |
           curl -L https://istio.io/downloadIstioctl | sh -
           sudo mv $HOME/.istioctl/bin/istioctl /usr/local/bin/istioctl
+          istioctl version
 
       # Step 4: Install Kubectl
       - name: Install Kubectl

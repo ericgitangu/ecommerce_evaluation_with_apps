@@ -142,24 +142,36 @@ else
   echo "No validation issues found for Istio configuration."
 fi
 
-# Install Istio
+# Install Istio CRDs first
+echo "Installing Istio CRDs..."
+istioctl install --set profile=demo --skip-confirmation --set components.pilot.enabled=false
+
+# Wait for CRDs to be established
+echo "Waiting for Istio CRDs to be established..."
+kubectl wait --for=condition=established --all crd --timeout=300s
+
+# Now install Istio with full configuration
+echo "Installing Istio..."
 if ! istioctl install -f istio/k8s/deployment.yaml --set profile=demo -y; then
   echo "Istio installation failed. Running diagnostics..."
-
   echo "Configuration validation:"
   istioctl analyze -n istio-system
-
   echo "Pod Status:"
   kubectl get pods -n istio-system
-
   echo "Events:"
   kubectl get events -n istio-system --sort-by='.lastTimestamp'
-
-  echo "Resource Usage:"
-  kubectl describe nodes | grep -A 5 "Allocated resources"
-
   exit 1
 fi
+
+# Wait for Istio pods to be ready (increased timeout)
+echo "Waiting for Istio pods to be ready..."
+kubectl wait --for=condition=ready pod -l app=istiod -n istio-system --timeout=300s
+kubectl wait --for=condition=ready pod -l app=istio-ingressgateway -n istio-system --timeout=300s
+
+# Apply mesh configuration after Istio is fully ready
+echo "Applying Istio mesh configuration..."
+kubectl wait --for=condition=Available deployment/istiod -n istio-system --timeout=300s
+kubectl apply -f istio/k8s/mesh-config.yaml
 
 # Configure namespace injection
 echo "Configuring Istio injection for namespaces..."
@@ -199,10 +211,6 @@ for i in {1..30}; do
     echo "Warning: Webhook configuration not found after 5 minutes. Continuing deployment..."
   fi
 done
-
-# Apply Istio configurations (mesh config)
-echo "Applying Istio configurations..."
-kubectl apply -f istio/k8s/mesh-config.yaml
 
 # Deploy application services
 for service in order catalog search frontend; do
