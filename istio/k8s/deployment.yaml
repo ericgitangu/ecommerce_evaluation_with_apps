@@ -4,13 +4,17 @@ metadata:
   namespace: istio-system
 spec:
   profile: demo
+  components:
+    telemetry:
+      enabled: false
+    tracing:
+      enabled: false
   meshConfig:
     enableAutoMtls: true
     defaultConfig:
       proxyMetadata:
         ISTIO_META_DNS_CAPTURE: "true"
         ISTIO_META_PROTOCOL_DETECT: "true"
-  components:
     pilot:
       k8s:
         resources:

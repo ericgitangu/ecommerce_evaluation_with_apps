@@ -13,10 +13,6 @@ for ns in monitoring logging messaging database istio-system; do
   kubectl create namespace "$ns" 2>/dev/null || true
 done
 
-# Apply default StorageClass
-echo "Applying default StorageClass..."
-kubectl apply -f default-storageClass.yaml
-
 # Deploy Prometheus
 echo "Deploying Prometheus..."
 kubectl apply -f prometheus/prometheus-configmap.yaml -n monitoring
@@ -147,7 +143,7 @@ else
 fi
 
 # Install Istio
-if ! istioctl install -f istio/k8s/deployment.yaml -y; then
+if ! istioctl install -f istio/k8s/deployment.yaml --set profile=demo -y; then
   echo "Istio installation failed. Running diagnostics..."
 
   echo "Configuration validation:"

@@ -41,7 +41,9 @@ cleanup
 echo "Creating Kind cluster..."
 kind create cluster \
   --config kind/k8s/kind-config.yaml \
-  --name egitangu-local-cluster
+  --name egitangu-local-cluster \
+  --image kindest/node:v1.28.0 \
+  --wait 60s
 
 # Verify cluster is ready
 echo "Verifying cluster is ready..."
