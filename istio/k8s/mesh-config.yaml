@@ -1,37 +1,19 @@
-apiVersion: install.istio.io/v1alpha1
-kind: IstioOperator
+apiVersion: networking.istio.io/v1alpha3
+kind: DestinationRule
+metadata:
+  name: default-mesh-config
+  namespace: istio-system
 spec:
-  meshConfig:
-    # Enable access logging
-    accessLogFile: /dev/stdout
-
-    # Configure default proxy settings
-    defaultConfig:
-      discoveryAddress: istiod.istio-system.svc:15012
-      proxyMetadata:
-        DNS_AGENT: ""
-      tracing:
-        sampling: 100.0
-      holdApplicationUntilProxyStarts: true
-      statNameLength: 189
-
-    # Enable automatic mTLS
-    enableAutoMtls: true
-
-    # Configure outlier detection
-    outboundTrafficPolicy:
-      mode: ALLOW_ANY
-
-    # Default service settings
-    defaultServiceSettings:
-      tcpKeepalive:
-        time: 7200s
-        interval: 75s
-        probes: 9
-
-    # Configure trust domain for security
-    trustDomain: "cluster.local"
-
-    # Enable protocol detection
-    enablePrometheusMerge: true
-    enableTracing: true
+  host: "*.local"
+  trafficPolicy:
+    connectionPool:
+      tcp:
+        maxConnections: 100
+        tcpKeepalive:
+          time: 7200s
+          interval: 75s
+          probes: 9
+    outlierDetection:
+      consecutive5xxErrors: 5
+      interval: 30s
+      baseEjectionTime: 30s

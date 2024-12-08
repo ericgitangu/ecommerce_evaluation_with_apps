@@ -117,25 +117,9 @@ kubectl wait --for=condition=ready pod -l app=istio-ingressgateway -n istio-syst
 echo "Verifying Istio installation..."
 istioctl analyze || true
 
-# Additional wait for Istio system namespace population
-echo "Waiting for Istio system namespace to be populated..."
-sleep 30
-
-# Check and wait for webhook configuration
-echo "Waiting for Istio webhook configuration..."
-for i in {1..30}; do
-  if kubectl get validatingwebhookconfiguration istiod-istio-system >/dev/null 2>&1; then
-    echo "Webhook configuration found, waiting for it to be ready..."
-    kubectl wait --for=condition=ready -n istio-system validatingwebhookconfiguration/istiod-istio-system --timeout=30s
-    break
-  else
-    echo "Waiting for webhook configuration to be created... (attempt $i/30)"
-    sleep 10
-  fi
-  if [ $i -eq 30 ]; then
-    echo "Warning: Webhook configuration not found after 5 minutes. Continuing deployment..."
-  fi
-done
+# Webhook readiness check
+echo "Waiting for Istio webhook to be ready..."
+kubectl wait --for=condition=ready -n istio-system validatingwebhookconfiguration/istiod-istio-system --timeout=120s || true
 
 # Deploy application services
 for service in order catalog search frontend; do
