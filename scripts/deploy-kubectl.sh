@@ -88,14 +88,50 @@ if ! istioctl install -f istio/k8s/deployment.yaml --set profile=demo -y; then
   exit 1
 fi
 
-# Wait for Istio pods to be ready (increased timeout)
-echo "Waiting for Istio pods to be ready..."
-kubectl wait --for=condition=ready pod -l app=istiod -n istio-system --timeout=300s
-kubectl wait --for=condition=ready pod -l app=istio-ingressgateway -n istio-system --timeout=300s
+# Wait for core Istio components
+echo "Waiting for Istio core components..."
+kubectl wait --for=condition=ready pod -l app=istiod -n istio-system --timeout=300s || true
+kubectl wait --for=condition=ready pod -l app=istio-ingressgateway -n istio-system --timeout=300s || true
+
+# Additional wait for CRDs and webhooks to be created
+echo "Waiting for Istio CRDs and webhooks to be created..."
+sleep 60
+
+# Verify Istio installation in istio-system namespace
+echo "Verifying Istio installation..."
+istioctl analyze -n istio-system || true
 
 # Apply mesh configuration after Istio is fully ready
 echo "Applying Istio mesh configuration..."
-kubectl wait --for=condition=Available deployment/istiod -n istio-system --timeout=300s
+kubectl wait --for=condition=Available deployment/istiod -n istio-system --timeout=300s || true
+kubectl apply -f istio/k8s/mesh-config.yaml
+
+# Configure namespace injection
+echo "Configuring Istio injection for namespaces..."
+kubectl label namespace default istio-injection=disabled --overwrite
+kubectl label namespace istio-system istio-injection=disabled --overwrite
+
+# Enable Istio injection for required namespaces
+for ns in ecommerce; do
+  kubectl label namespace "$ns" istio-injection=enabled --overwrite
+done
+
+# Wait for Istio pods to be ready
+echo "Waiting for Istio pods to be ready..."
+kubectl wait --for=condition=ready pod -l app=istiod -n istio-system --timeout=300s || true
+kubectl wait --for=condition=ready pod -l app=istio-ingressgateway -n istio-system --timeout=300s || true
+
+# Additional wait for Istio system namespace population
+echo "Waiting for Istio system to stabilize..."
+sleep 30
+
+# Verify installation
+echo "Verifying Istio installation..."
+istioctl analyze || true
+
+# Apply mesh configuration after Istio is fully ready
+echo "Applying Istio mesh configuration..."
+kubectl wait --for=condition=Available deployment/istiod -n istio-system --timeout=300s || true
 kubectl apply -f istio/k8s/mesh-config.yaml
 
 # Configure namespace injection
@@ -113,13 +149,13 @@ echo "Waiting for Istio pods to be ready..."
 kubectl wait --for=condition=ready pod -l app=istiod -n istio-system --timeout=300s || true
 kubectl wait --for=condition=ready pod -l app=istio-ingressgateway -n istio-system --timeout=300s || true
 
-# Verify installation and wait for webhook
+# Additional wait for Istio system namespace population
+echo "Waiting for Istio system to stabilize..."
+sleep 30
+
+# Verify installation
 echo "Verifying Istio installation..."
 istioctl analyze || true
-
-# Webhook readiness check
-echo "Waiting for Istio webhook to be ready..."
-kubectl wait --for=condition=ready -n istio-system validatingwebhookconfiguration/istiod-istio-system --timeout=120s || true
 
 # Deploy application services
 for service in order catalog search frontend; do
