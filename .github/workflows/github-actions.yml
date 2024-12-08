@@ -11,10 +11,12 @@ jobs:
     steps:
       # Step 1: Checkout Code
       - uses: actions/checkout@v3
-
-      # Step 2: Create k8s Kind Cluster
-      - name: Create k8s Kind Cluster
-        uses: helm/kind-action@v1.8.0
+      
+      # Step 2: Install Kind
+      - name: Install Kind
+        run: |
+          curl -Lo /usr/local/bin/kind https://kind.sigs.k8s.io/dl/v0.20.0/kind-linux-amd64
+          chmod +x /usr/local/bin/kind
 
       # Step 3: Install Istioctl and Istio
       - name: Install Istioctl
