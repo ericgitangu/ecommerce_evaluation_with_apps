@@ -6,6 +6,9 @@ import os
 import logging
 import time
 import sys
+import uuid
+from datetime import datetime
+import json
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from utils.logger import setup_logger
 
@@ -43,6 +46,22 @@ def init_db():
     except Exception as e:
         logging.error(f"Error initializing database: {str(e)}")
         raise
+
+# Publish to RabbitMQ
+def publish_to_queue(message):
+    try:
+        connection = pika.BlockingConnection(pika.ConnectionParameters(host=RABBITMQ_HOST))
+        channel = connection.channel()
+        channel.queue_declare(queue='orders')
+        channel.basic_publish(
+            exchange='',
+            routing_key='orders',
+            body=message
+        )
+        logger.info(f"Published message to orders queue: {message}")
+        connection.close()
+    except Exception as e:
+        logger.error(f"Error publishing to RabbitMQ: {str(e)}")
 
 @app.route('/')
 def home():
@@ -119,6 +138,40 @@ def metrics():
 def health():
     logger.info("Health check request received for order service")
     return jsonify({"status": "healthy"}), 200
+
+# Add a new endpoint to create orders that will publish messages
+@app.route('/order', methods=['POST'])
+def create_order():
+    start_time = time.time()
+    API_HITS.labels(method='POST', endpoint='/order').inc()
+    
+    try:
+        data = request.get_json()
+        order_id = str(uuid.uuid4())
+        
+        # Store in database
+        with db_connection.cursor() as cursor:
+            cursor.execute(
+                "INSERT INTO orders (order_id, product, quantity) VALUES (%s, %s, %s)",
+                (order_id, data['product'], data['quantity'])
+            )
+        db_connection.commit()
+        
+        # Publish to RabbitMQ
+        message = json.dumps({
+            'order_id': order_id,
+            'product': data['product'],
+            'quantity': data['quantity'],
+            'timestamp': datetime.now().isoformat()
+        })
+        publish_to_queue(message)
+        
+        PROCESSING_TIME.labels(endpoint='/order').observe(time.time() - start_time)
+        return jsonify({"order_id": order_id, "status": "created"}), 201
+        
+    except Exception as e:
+        logger.error(f"Error creating order: {str(e)}")
+        return jsonify({"error": "Failed to create order"}), 500
 
 # Prometheus metrics registration
 register_metrics(app, app_version="v1.0.0", app_config="production")

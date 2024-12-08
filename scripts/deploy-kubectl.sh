@@ -7,13 +7,13 @@ set -e
 echo "Creating secrets..."
 kubectl apply -f secrets.yaml -n ecommerce
 
-# Namespace creation - we already created these in deploy-helm.sh
-# echo "Creating namespaces..."
-# kubectl create namespace monitoring
-# kubectl create namespace logging
-# kubectl create namespace messaging
-# kubectl create namespace database
-# kubectl create namespace istio-system
+# Namespace creation
+echo "Creating namespaces, ignoring if already exists..."
+kubectl create namespace monitoring 2>/dev/null || true
+kubectl create namespace logging 2>/dev/null || true
+kubectl create namespace messaging 2>/dev/null || true
+kubectl create namespace database 2>/dev/null || true
+kubectl create namespace istio-system 2>/dev/null || true
 
 # Prometheus deployment
 echo "Deploying Prometheus..."
@@ -51,32 +51,138 @@ kubectl delete -f postgres/k8s/service.yaml -n database --ignore-not-found
 kubectl create -f postgres/k8s/deployment.yaml -n database --save-config
 kubectl create -f postgres/k8s/service.yaml -n database --save-config
 
-# Create Istio service accounts
-echo "Creating Istio service accounts..."
-kubectl create namespace istio-system || true
-kubectl create serviceaccount istiod -n istio-system || true
-kubectl create serviceaccount istio-ingressgateway-service-account -n istio-system || true
+# Get the kind cluster name
+CLUSTER_NAME=$(kubectl config current-context | sed 's/kind-//')
+echo "Using kind cluster: ${CLUSTER_NAME}"
 
-# Create the required ConfigMap
-echo "Creating initial Istio ConfigMap..."
-kubectl create configmap istio-ca-root-cert -n istio-system || true
+# Pull and load Istio images
+echo "Pulling and loading Istio images..."
+docker pull docker.io/istio/pilot:1.24.1
+docker pull docker.io/istio/proxyv2:1.24.1
 
-# Install Istio with basic configuration
-echo "Installing Istio..."
-istioctl install -f istio/k8s/istio-config.yaml -y || {
-    echo "Istio installation failed. Running diagnostics..."
-    kubectl describe nodes
-    kubectl get pods -n istio-system
-    kubectl describe pods -n istio-system
-    kubectl logs -n istio-system -l app=istiod --tail=100
-    kubectl get events -n istio-system --sort-by='.lastTimestamp'
+echo "Loading images into kind cluster..."
+kind load docker-image docker.io/istio/pilot:1.24.1 --name "${CLUSTER_NAME}"
+kind load docker-image docker.io/istio/proxyv2:1.24.1 --name "${CLUSTER_NAME}"
+
+# Create namespace and service accounts with retries
+echo "Creating Istio namespace and service accounts..."
+for i in {1..3}; do
+    kubectl create namespace istio-system 2>/dev/null || true
+    kubectl create serviceaccount istiod -n istio-system && break || {
+        if [ $i -eq 3 ]; then
+            echo "Failed to create istiod service account after 3 attempts"
+            exit 1
+        fi
+        echo "Attempt $i failed, waiting 10s..."
+        sleep 10
+    }
+done
+
+for i in {1..3}; do
+    kubectl create serviceaccount istio-ingressgateway-service-account -n istio-system && break || {
+        if [ $i -eq 3 ]; then
+            echo "Failed to create ingress gateway service account after 3 attempts"
+            exit 1
+        fi
+        echo "Attempt $i failed, waiting 10s..."
+        sleep 10
+    }
+done
+
+# Create required ConfigMaps and Secrets with retries
+echo "Creating initial Istio ConfigMaps and Secrets..."
+for i in {1..3}; do
+    kubectl create configmap istio-ca-root-cert -n istio-system && break || {
+        if [ $i -eq 3 ]; then
+            echo "Failed to create istio-ca-root-cert configmap after 3 attempts"
+            exit 1
+        fi
+        echo "Attempt $i failed, waiting 10s..."
+        sleep 10
+    }
+done
+
+for i in {1..3}; do
+    kubectl create configmap istio -n istio-system && break || {
+        if [ $i -eq 3 ]; then
+            echo "Failed to create istio configmap after 3 attempts"
+            exit 1
+        fi
+        echo "Attempt $i failed, waiting 10s..."
+        sleep 10
+    }
+done
+
+# Create essential Istio secrets with retries
+echo "Creating essential Istio secrets..."
+for i in {1..3}; do
+    kubectl create secret generic istiod-tls -n istio-system && break || {
+        if [ $i -eq 3 ]; then
+            echo "Failed to create istiod-tls secret after 3 attempts"
+            exit 1
+        fi
+        echo "Attempt $i failed, waiting 10s..."
+        sleep 10
+    }
+done
+
+for i in {1..3}; do
+    kubectl create secret generic istio-ingressgateway-certs -n istio-system && break || {
+        if [ $i -eq 3 ]; then
+            echo "Failed to create ingress gateway certs secret after 3 attempts"
+            exit 1
+        fi
+        echo "Attempt $i failed, waiting 10s..."
+        sleep 10
+    }
+done
+
+# Wait longer for resources to be ready
+echo "Waiting for resources to be ready..."
+sleep 30
+
+# Verify cluster health before proceeding
+echo "Verifying cluster health..."
+kubectl cluster-info
+kubectl get nodes
+kubectl get pods -A
+
+# Verify the Istio configuration
+echo "Analyzing Istio configuration..."
+istioctl analyze \
+    istio/k8s/deployment.yaml \
+    --use-kube=false
+    echo "Istio configuration validation failed. See errors above."
     exit 1
 }
 
-# Wait for Istio components explicitly
-echo "Waiting for Istio components..."
+# Install Istio
+istioctl install -f istio/k8s/deployment.yaml -y || {
+    echo "Istio installation failed. Running diagnostics..."
+    
+    echo "Configuration validation:"
+    istioctl analyze -n istio-system
+    
+    echo "Pod Status:"
+    kubectl get pods -n istio-system
+    
+    echo "Events:"
+    kubectl get events -n istio-system --sort-by='.lastTimestamp'
+    
+    echo "Resource Usage:"
+    kubectl describe nodes | grep -A 5 "Allocated resources"
+    
+    exit 1
+}
+
+# Wait for pods explicitly after installation
+echo "Waiting for Istio pods to be ready..."
 kubectl wait --for=condition=ready pod -l app=istiod -n istio-system --timeout=300s || true
 kubectl wait --for=condition=ready pod -l app=istio-ingressgateway -n istio-system --timeout=300s || true
+
+# Verify installation
+echo "Verifying Istio installation..."
+istioctl analyze || true
 
 # Add a sleep to allow initial creation of pods
 echo "Waiting for Istio system namespace to be populated..."
@@ -85,6 +191,11 @@ sleep 30
 # Enable Istio injection for ecommerce namespace
 echo "Enabling Istio injection for ecommerce namespace..."
 kubectl label namespace ecommerce istio-injection=enabled --overwrite
+
+# Wait for Istiod webhook to be ready before applying mesh config
+echo "Waiting for Istiod webhook to be ready..."
+kubectl wait --for=condition=ready pod -l app=istiod -n istio-system --timeout=300s
+kubectl wait --for=condition=ready -n istio-system validatingwebhookconfiguration/istiod-istio-system --timeout=300s || true
 
 # Apply Istio configurations
 echo "Applying Istio configurations..."
@@ -112,6 +223,16 @@ kubectl wait --for=condition=available --timeout=60s deployment --all -n ecommer
 
 kubectl get pods -A
 kubectl get services -A
+
+# Display pod resource allocations and usage
+echo "Displaying pod resource allocations..."
+kubectl get pods -A -o custom-columns="NAMESPACE:.metadata.namespace,NAME:.metadata.name,CPU_REQUEST:.spec.containers[*].resources.requests.cpu,CPU_LIMIT:.spec.containers[*].resources.limits.cpu,MEMORY_REQUEST:.spec.containers[*].resources.requests.memory,MEMORY_LIMIT:.spec.containers[*].resources.limits.memory"
+
+# Get current resource usage
+echo -e "\nCurrent resource usage by pods:"
+kubectl top pods -A
+
+
 
 # Set up port forwarding
 echo "Setting up port forwarding..."

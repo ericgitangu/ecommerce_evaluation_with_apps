@@ -7,9 +7,10 @@ import sys
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from utils.logger import setup_logger
 
-# Initialize Flask app and Elasticsearch client
+# Initialize Flask app and Elasticsearch client FQDN
 app = Flask(__name__)
-es = Elasticsearch(hosts=["http://elasticsearch-service:9200"])
+es = Elasticsearch(hosts=["es = Elasticsearch(hosts=["http://elasticsearch.logging.svc.cluster.local:9200"])
+"])
 
 # Elasticsearch index name
 INDEX_NAME = "products"
