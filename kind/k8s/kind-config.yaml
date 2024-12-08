@@ -1,24 +1,6 @@
 kind: Cluster
 apiVersion: kind.x-k8s.io/v1alpha4
 nodes:
-  - role: control-plane
-    image: kindest/node:v1.28.0
-    kubeadmConfigPatches:
-      - |
-        kind: InitConfiguration
-        nodeRegistration:
-          kubeletExtraArgs:
-            system-reserved: memory=1Gi,cpu=500m
-            kube-reserved: memory=1Gi,cpu=500m
-            eviction-hard: memory.available<500Mi
-    extraPortMappings:
-      - containerPort: 80
-        hostPort: 80
-      - containerPort: 443
-        hostPort: 443
-    extraMounts:
-      - hostPath: /tmp/kind-control-data
-        containerPath: /var/lib/containerd
   - role: worker
     image: kindest/node:v1.28.0
     kubeadmConfigPatches:
@@ -26,9 +8,19 @@ nodes:
         kind: JoinConfiguration
         nodeRegistration:
           kubeletExtraArgs:
-            system-reserved: memory=2Gi,cpu=1
-            kube-reserved: memory=2Gi,cpu=1
+            system-reserved: memory=2Gi
             eviction-hard: memory.available<1Gi
-    extraMounts:
-      - hostPath: /tmp/kind-worker-data
-        containerPath: /var/lib/containerd
+  - role: control-plane
+    image: kindest/node:v1.28.0
+    kubeadmConfigPatches:
+      - |
+        kind: InitConfiguration
+        nodeRegistration:
+          kubeletExtraArgs:
+            system-reserved: memory=1Gi
+            eviction-hard: memory.available<500Mi
+    extraPortMappings:
+      - containerPort: 80
+        hostPort: 80
+      - containerPort: 443
+        hostPort: 443
