@@ -15,21 +15,21 @@ spec:
         app: prometheus
     spec:
       containers:
-      - name: prometheus
-        image: prom/prometheus:latest
-        args:
-          - "--config.file=/etc/prometheus/prometheus.yml"
-        resources:
-          limits:
-            cpu: "1000m"
-            memory: "2Gi"
-          requests:
-            cpu: "500m"
-            memory: "1Gi"
-        volumeMounts:
-        - name: prometheus-config
-          mountPath: /etc/prometheus/
+        - name: prometheus
+          image: prom/prometheus:latest
+          args:
+            - "--config.file=/etc/prometheus/prometheus.yml"
+          resources:
+            limits:
+              cpu: "500m"
+              memory: "512Mi"
+            requests:
+              cpu: "250m"
+              memory: "256Mi"
+          volumeMounts:
+            - name: prometheus-config
+              mountPath: /etc/prometheus/
       volumes:
-      - name: prometheus-config
-        configMap:
-          name: prometheus-config
+        - name: prometheus-config
+          configMap:
+            name: prometheus-config

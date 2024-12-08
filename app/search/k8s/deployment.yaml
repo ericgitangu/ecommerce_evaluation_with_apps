@@ -19,12 +19,12 @@ spec:
         - name: search-service
           image: egitangu/search-service:latest
           resources:
-            requests:
-              memory: "128Mi"
-              cpu: "100m"
             limits:
-              memory: "256Mi"
-              cpu: "500m"
+              memory: "128Mi"
+              cpu: "250m"
+            requests:
+              memory: "64Mi"
+              cpu: "50m"
           ports:
             - containerPort: 5002
           env:

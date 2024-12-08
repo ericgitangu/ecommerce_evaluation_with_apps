@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Stop on errors
+# Stop execution on error
 set -e
 
 # Apply secrets
@@ -51,9 +51,9 @@ kubectl delete -f postgres/k8s/service.yaml -n database --ignore-not-found
 kubectl create -f postgres/k8s/deployment.yaml -n database --save-config
 kubectl create -f postgres/k8s/service.yaml -n database --save-config
 
-# Get the kind cluster name
+# Get the Kind cluster name
 CLUSTER_NAME=$(kubectl config current-context | sed 's/kind-//')
-echo "Using kind cluster: ${CLUSTER_NAME}"
+echo "Using Kind cluster: ${CLUSTER_NAME}"
 
 # Pull and load Istio images into Kind
 echo "Pulling and loading Istio images..."
@@ -66,48 +66,60 @@ kind load docker-image docker.io/istio/proxyv2:1.24.1 --name "${CLUSTER_NAME}"
 echo "Creating Istio namespace and service accounts..."
 for i in {1..3}; do
   kubectl create namespace istio-system 2>/dev/null || true
-  if kubectl create serviceaccount istiod -n istio-system; then break; fi
-  if [ $i -eq 3 ]; then
-    echo "Failed to create istiod service account after 3 attempts"
-    exit 1
+  if kubectl create serviceaccount istiod -n istio-system; then
+    break
+  else
+    if [ $i -eq 3 ]; then
+      echo "Failed to create istiod service account after 3 attempts"
+      exit 1
+    fi
+    echo "Attempt $i failed, waiting 10s..."
+    sleep 10
   fi
-  echo "Attempt $i failed, waiting 10s..."
-  sleep 10
 done
 
 for i in {1..3}; do
-  if kubectl create serviceaccount istio-ingressgateway-service-account -n istio-system; then break; fi
-  if [ $i -eq 3 ]; then
-    echo "Failed to create ingress gateway service account after 3 attempts"
-    exit 1
+  if kubectl create serviceaccount istio-ingressgateway-service-account -n istio-system; then
+    break
+  else
+    if [ $i -eq 3 ]; then
+      echo "Failed to create ingress gateway service account after 3 attempts"
+      exit 1
+    fi
+    echo "Attempt $i failed, waiting 10s..."
+    sleep 10
   fi
-  echo "Attempt $i failed, waiting 10s..."
-  sleep 10
 done
 
 # Create required ConfigMaps and Secrets with retries
 echo "Creating initial Istio ConfigMaps and Secrets..."
 for resource in istio-ca-root-cert istio; do
   for i in {1..3}; do
-    if kubectl create configmap "$resource" -n istio-system; then break; fi
-    if [ $i -eq 3 ]; then
-      echo "Failed to create $resource configmap after 3 attempts"
-      exit 1
+    if kubectl create configmap "$resource" -n istio-system; then
+      break
+    else
+      if [ $i -eq 3 ]; then
+        echo "Failed to create $resource configmap after 3 attempts"
+        exit 1
+      fi
+      echo "Attempt $i failed, waiting 10s..."
+      sleep 10
     fi
-    echo "Attempt $i failed, waiting 10s..."
-    sleep 10
   done
 done
 
 for resource in istiod-tls istio-ingressgateway-certs; do
   for i in {1..3}; do
-    if kubectl create secret generic "$resource" -n istio-system; then break; fi
-    if [ $i -eq 3 ]; then
-      echo "Failed to create $resource secret after 3 attempts"
-      exit 1
+    if kubectl create secret generic "$resource" -n istio-system; then
+      break
+    else
+      if [ $i -eq 3 ]; then
+        echo "Failed to create $resource secret after 3 attempts"
+        exit 1
+      fi
+      echo "Attempt $i failed, waiting 10s..."
+      sleep 10
     fi
-    echo "Attempt $i failed, waiting 10s..."
-    sleep 10
   done
 done
 
@@ -124,7 +136,7 @@ kubectl get pods -A
 # Verify Istio configuration before installation
 echo "Analyzing Istio configuration..."
 if ! istioctl analyze istio/k8s/deployment.yaml --use-kube=false; then
-  echo "Istio configuration validation failed. Halting!"
+  echo "Istio configuration validation failed. See errors above."
   exit 1
 else
   echo "No validation issues found for Istio configuration."
