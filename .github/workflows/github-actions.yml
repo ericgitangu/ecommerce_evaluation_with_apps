@@ -9,20 +9,39 @@ jobs:
   test:
     runs-on: ubuntu-latest
     steps:
+      # Step 1: Checkout Code
       - uses: actions/checkout@v3
 
+      # Step 2: Create k8s Kind Cluster
       - name: Create k8s Kind Cluster
         uses: helm/kind-action@v1.5.0
 
+      # Step 3: Install Istioctl and Istio
+      - name: Install Istioctl
+        run: |
+          curl -L https://istio.io/downloadIstioctl | sh -
+          sudo mv $HOME/.istioctl/bin/istioctl /usr/local/bin/istioctl
+          istioctl version
+          istioctl install --set profile=demo -y
+
+      # Step 4: Install Kubectl
+      - name: Install Kubectl
+        run: |
+          curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
+          sudo install -o root -g root -m 0755 kubectl /usr/local/bin/kubectl
+          kubectl version --client
+
+      # Step 5: Run Tests
       - name: Test with Kind
         run: |
           chmod +x ./scripts/test-local.sh
           ./scripts/test-local.sh
+
   build-and-scan:
     needs: test
     runs-on: ubuntu-latest
     steps:
-      # Step 1: Checkout the code
+      # Step 1: Checkout Code
       - name: Checkout Code
         uses: actions/checkout@v3
 
@@ -47,7 +66,7 @@ jobs:
             docker push egitangu/$service-service:latest
           done
 
-      # Step 5: Scan images with Trivy
+      # Step 5: Vulnerability Scan (using one example image, can be extended)
       - name: Vulnerability Scan
         uses: aquasecurity/trivy-action@master
         with:
@@ -61,14 +80,37 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v3
 
-      # Step 2: Install Helm
+      # Step 2: Create k8s Kind Cluster (new clean environment for deploy)
+      - name: Create k8s Kind Cluster
+        uses: helm/kind-action@v1.5.0
+
+      # Step 3: Install Istioctl and Istio (if needed for deploy environment)
+      - name: Install Istioctl
+        run: |
+          curl -L https://istio.io/downloadIstioctl | sh -
+          sudo mv $HOME/.istioctl/bin/istioctl /usr/local/bin/istioctl
+          istioctl version
+          istioctl install --set profile=demo -y
+
+      # Step 4: Install Kubectl (for deploy environment)
+      - name: Install Kubectl
+        run: |
+          curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
+          sudo install -o root -g root -m 0755 kubectl /usr/local/bin/kubectl
+          kubectl version --client
+
+      # Step 5: Install Helm
       - name: Install Helm
         run: curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
 
-      # Step 3: Deploy Third Party Services with Helm
+      # Step 6: Deploy Third Party Services with Helm
       - name: Deploy Third Party Services with Helm
-        run: chmod +x ./scripts/deploy-helm.sh && ./scripts/deploy-helm.sh
+        run: |
+          chmod +x ./scripts/deploy-helm.sh
+          ./scripts/deploy-helm.sh
 
-      # Step 4: Deploy Services with kubectl
+      # Step 7: Deploy Services with kubectl
       - name: Deploy Services with kubectl
-        run: chmod +x ./scripts/deploy-kubectl.sh && ./scripts/deploy-kubectl.sh
+        run: |
+          chmod +x ./scripts/deploy-kubectl.sh
+          ./scripts/deploy-kubectl.sh
