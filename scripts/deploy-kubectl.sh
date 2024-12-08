@@ -142,9 +142,9 @@ else
   echo "No validation issues found for Istio configuration."
 fi
 
-# Install Istio CRDs first
+ Instead of using istioctl install for CRDs
 echo "Installing Istio CRDs..."
-istioctl install --set profile=demo --skip-confirmation --set components.pilot.enabled=false
+kubectl apply -f https://raw.githubusercontent.com/istio/istio/master/manifests/charts/base/crds/crd-all.yaml
 
 # Wait for CRDs to be established
 echo "Waiting for Istio CRDs to be established..."
@@ -152,7 +152,7 @@ kubectl wait --for=condition=established --all crd --timeout=300s
 
 # Now install Istio with full configuration
 echo "Installing Istio..."
-if ! istioctl install -f istio/k8s/deployment.yaml --set profile=demo -y; then
+if ! istioctl install -f istio/k8s/deployment.yaml --set profile=demo --set tracing.enabled=false --set telemetry.enabled=false -y; then
   echo "Istio installation failed. Running diagnostics..."
   echo "Configuration validation:"
   istioctl analyze -n istio-system
