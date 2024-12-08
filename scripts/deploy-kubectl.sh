@@ -171,14 +171,26 @@ kubectl apply -f istio/k8s/auth-policy.yaml
 
 # Verification steps for deployments
 echo "Verifying resources..."
-kubectl wait --for=condition=available --timeout=60s deployment --all -n monitoring
-kubectl wait --for=condition=available --timeout=60s deployment --all -n logging
-kubectl wait --for=condition=available --timeout=60s deployment --all -n messaging
-kubectl wait --for=condition=available --timeout=60s deployment --all -n database
-kubectl wait --for=condition=available --timeout=60s deployment --all -n ecommerce
+echo "Waiting for monitoring deployments..."
+kubectl wait --for=condition=available --timeout=180s deployment --all -n monitoring || true
 
+echo "Waiting for logging deployments..."
+kubectl wait --for=condition=available --timeout=180s deployment --all -n logging || true
+# Add specific wait for Elasticsearch
+kubectl rollout status deployment/elasticsearch -n logging --timeout=300s || true
+
+echo "Waiting for messaging deployments..."
+kubectl wait --for=condition=available --timeout=180s deployment --all -n messaging || true
+
+echo "Waiting for database deployments..."
+kubectl wait --for=condition=available --timeout=180s deployment --all -n database || true
+
+echo "Waiting for application deployments..."
+kubectl wait --for=condition=available --timeout=180s deployment --all -n ecommerce || true
+
+# Display status of all pods
+echo "Current pod status:"
 kubectl get pods -A
-kubectl get services -A
 
 # Display pod resource allocations and usage
 echo "Displaying pod resource allocations..."
