@@ -10,3 +10,25 @@ nodes:
       - containerPort: 443
         hostPort: 443
         protocol: TCP
+    kubeadmConfigPatches:
+      - |
+        kind: InitConfiguration
+        nodeRegistration:
+          kubeletExtraArgs:
+            node-labels: "ingress-ready=true"
+            authorization-mode: "AlwaysAllow"
+      - |
+        kind: ClusterConfiguration
+        apiServer:
+          extraArgs:
+            "enable-admission-plugins": "NodeRestriction"
+        controllerManager:
+          extraArgs:
+            "terminated-pod-gc-threshold": "100"
+        scheduler:
+          extraArgs:
+            "v": "2"
+    containerdConfigPatches:
+      - |
+        [plugins."io.containerd.grpc.v1.cri".containerd.runtimes.runc.options]
+          SystemdCgroup = true
