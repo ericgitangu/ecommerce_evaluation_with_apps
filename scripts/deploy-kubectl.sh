@@ -161,12 +161,22 @@ if ! istioctl install -f istio/k8s/deployment.yaml --set profile=demo -y; then
   exit 1
 fi
 
+# Configure namespace injection
+echo "Configuring Istio injection for namespaces..."
+# Explicitly disable Istio injection for default namespace
+kubectl label namespace default istio-injection=disabled --overwrite
+
+# Enable Istio injection for required namespaces
+for ns in ecommerce; do
+  kubectl label namespace "$ns" istio-injection=enabled --overwrite
+done
+
 # Wait for Istio pods to be ready
 echo "Waiting for Istio pods to be ready..."
 kubectl wait --for=condition=ready pod -l app=istiod -n istio-system --timeout=300s || true
 kubectl wait --for=condition=ready pod -l app=istio-ingressgateway -n istio-system --timeout=300s || true
 
-# Verify installation again
+# Verify installation and wait for webhook
 echo "Verifying Istio installation..."
 istioctl analyze || true
 
@@ -174,14 +184,21 @@ istioctl analyze || true
 echo "Waiting for Istio system namespace to be populated..."
 sleep 30
 
-# Enable Istio injection for ecommerce namespace
-echo "Enabling Istio injection for ecommerce namespace..."
-kubectl label namespace ecommerce istio-injection=enabled --overwrite
-
-# Wait for Istiod webhook to be ready
-echo "Waiting for Istiod webhook to be ready..."
-kubectl wait --for=condition=ready pod -l app=istiod -n istio-system --timeout=300s
-kubectl wait --for=condition=ready -n istio-system validatingwebhookconfiguration/istiod-istio-system --timeout=300s || true
+# Check and wait for webhook configuration
+echo "Waiting for Istio webhook configuration..."
+for i in {1..30}; do
+  if kubectl get validatingwebhookconfiguration istiod-istio-system >/dev/null 2>&1; then
+    echo "Webhook configuration found, waiting for it to be ready..."
+    kubectl wait --for=condition=ready -n istio-system validatingwebhookconfiguration/istiod-istio-system --timeout=30s
+    break
+  else
+    echo "Waiting for webhook configuration to be created... (attempt $i/30)"
+    sleep 10
+  fi
+  if [ $i -eq 30 ]; then
+    echo "Warning: Webhook configuration not found after 5 minutes. Continuing deployment..."
+  fi
+done
 
 # Apply Istio configurations (mesh config)
 echo "Applying Istio configurations..."
