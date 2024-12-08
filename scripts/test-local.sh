@@ -37,10 +37,13 @@ cleanup() {
 # Run cleanup
 cleanup
 
+# Get the absolute path to the project root directory
+PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+
 # Create new cluster
 echo "Creating Kind cluster..."
 kind create cluster \
-  --config kind/k8s/kind-config.yaml \
+  --config "${PROJECT_ROOT}/kind/k8s/kind-config.yaml" \
   --name egitangu-local-cluster \
   --image kindest/node:v1.28.0 \
   --wait 60s
