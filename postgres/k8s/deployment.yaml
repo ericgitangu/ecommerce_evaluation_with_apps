@@ -15,17 +15,20 @@ spec:
         app: postgres
     spec:
       containers:
-      - name: postgres
-        image: postgres:15
-        resources:
-          limits:
-            cpu: "1000m"
-            memory: "2Gi"
-          requests:
-            cpu: "500m"
-            memory: "1Gi"
-        env:
-        - name: POSTGRES_PASSWORD
-          value: "mysecretpassword"
+        - name: postgres
+          image: postgres:13-alpine
+          resources:
+            limits:
+              cpu: "500m"
+              memory: "512Mi"
+            requests:
+              cpu: "200m"
+              memory: "256Mi"
+          env:
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: service-secrets
+                  key: postgres-password
         ports:
         - containerPort: 5432
