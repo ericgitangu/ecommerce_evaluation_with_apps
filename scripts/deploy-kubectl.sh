@@ -144,7 +144,7 @@ fi
 
 # Istioctl install for CRDs
 echo "Installing Istio CRDs..."
-kubectl apply -f https://github.com/istio/istio/blob/1.24.1/manifests/charts/base/templates/crds.yaml
+kubectl apply -f https://github.com/istio/istio/blob/master/manifests/charts/base/files/crd-all.gen.yaml
 
 # Wait for CRDs to be established
 echo "Waiting for Istio CRDs to be established..."
