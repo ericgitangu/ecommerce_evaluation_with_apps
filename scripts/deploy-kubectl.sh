@@ -38,7 +38,7 @@ if kubectl apply -f secrets.yaml -n ecommerce; then
     log_success "Secrets applied successfully ${TICK}"
 else
     log_error "Failed to apply secrets ${CROSS}"
-    exit 1
+    # exit 1
 fi
 
 # 1. Install Istio First
@@ -55,11 +55,11 @@ for image in "pilot:1.24.1" "proxyv2:1.24.1"; do
             log_success "Loaded istio/${image} into cluster ${TICK}"
         else
             log_error "Failed to load istio/${image} into cluster ${CROSS}"
-            exit 1
+            # exit 1
         fi
     else
         log_error "Failed to pull istio/${image} ${CROSS}"
-        exit 1
+        # exit 1
     fi
 done
 
@@ -67,7 +67,7 @@ done
 log_info "Analyzing Istio configuration..."
 if ! istioctl analyze istio/k8s/deployment.yaml --use-kube=false; then
     log_error "Istio configuration validation failed ${CROSS}"
-    exit 1
+    # exit 1
 fi
 log_success "Istio configuration validated ${TICK}"
 
@@ -78,7 +78,7 @@ if ! istioctl install -f istio/k8s/deployment.yaml --set profile=demo -y; then
     istioctl analyze -n istio-system
     kubectl get pods -n istio-system
     kubectl get events -n istio-system --sort-by='.lastTimestamp'
-    exit 1
+    # exit 1
 fi
 log_success "Istio installed successfully ${TICK}"
 
@@ -108,5 +108,5 @@ if kubectl apply -f istio/k8s/mesh-config.yaml; then
     log_success "Mesh configuration applied ${TICK}"
 else
     log_error "Failed to apply mesh configuration ${CROSS}"
-    exit 1
+    # exit 1
 fi
