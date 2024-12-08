@@ -1,5 +1,20 @@
 #!/bin/bash
 
+# Color definitions
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
+NC='\033[0m' # No Color
+TICK="${GREEN}✓${NC}"
+CROSS="${RED}✗${NC}"
+
+# Print with color
+log_info() { echo -e "${BLUE}INFO:${NC} $1"; }
+log_success() { echo -e "${GREEN}SUCCESS:${NC} $1"; }
+log_warning() { echo -e "${YELLOW}WARNING:${NC} $1"; }
+log_error() { echo -e "${RED}ERROR:${NC} $1"; }
+
 # Stop execution on error
 set -e
 
@@ -8,172 +23,90 @@ DEPLOY_MONITORING=${DEPLOY_MONITORING:-true}
 DEPLOY_LOGGING=${DEPLOY_LOGGING:-true}
 
 # Create namespaces first
-echo "Creating namespaces (if not exist)..."
+log_info "Creating namespaces..."
 for ns in istio-system database messaging ecommerce monitoring logging; do
-  kubectl create namespace "$ns" 2>/dev/null || true
+    if kubectl create namespace "$ns" 2>/dev/null; then
+        log_success "Created namespace $ns ${TICK}"
+    else
+        log_info "Namespace $ns already exists ${TICK}"
+    fi
 done
 
 # Apply secrets early
-echo "Creating secrets..."
-kubectl apply -f secrets.yaml -n ecommerce
+log_info "Creating secrets..."
+if kubectl apply -f secrets.yaml -n ecommerce; then
+    log_success "Secrets applied successfully ${TICK}"
+else
+    log_error "Failed to apply secrets ${CROSS}"
+    exit 1
+fi
 
-# 1. Install Istio First (Core Service Mesh)
-echo "Setting up Istio..."
-# Get the Kind cluster name
+# 1. Install Istio First
+log_info "Setting up Istio..."
 CLUSTER_NAME=$(kubectl config current-context | sed 's/kind-//')
-echo "Using Kind cluster: ${CLUSTER_NAME}"
+log_info "Using Kind cluster: ${CLUSTER_NAME}"
 
-# Pull and load Istio images into Kind
-echo "Pulling and loading Istio images..."
-docker pull docker.io/istio/pilot:1.24.1
-docker pull docker.io/istio/proxyv2:1.24.1
-kind load docker-image docker.io/istio/pilot:1.24.1 --name "${CLUSTER_NAME}"
-kind load docker-image docker.io/istio/proxyv2:1.24.1 --name "${CLUSTER_NAME}"
-
-# Verify Istio configuration before installation
-echo "Analyzing Istio configuration..."
-if ! istioctl analyze istio/k8s/deployment.yaml --use-kube=false; then
-  echo "Istio configuration validation failed. Halting..."
-  exit 1
-fi
-
-# Install Istio
-echo "Installing Istio..."
-if ! istioctl install -f istio/k8s/deployment.yaml --set profile=demo -y; then
-  echo "Istio installation failed. Running diagnostics..."
-  istioctl analyze -n istio-system
-  kubectl get pods -n istio-system
-  kubectl get events -n istio-system --sort-by='.lastTimestamp'
-  exit 1
-fi
-
-# Wait for Istio core components
-echo "Waiting for Istio core components..."
-kubectl wait --for=condition=ready pod -l app=istiod -n istio-system --timeout=300s || true
-kubectl wait --for=condition=ready pod -l app=istio-ingressgateway -n istio-system --timeout=300s || true
-
-# Configure namespace injection
-kubectl label namespace default istio-injection=disabled --overwrite
-kubectl label namespace istio-system istio-injection=disabled --overwrite
-kubectl label namespace ecommerce istio-injection=enabled --overwrite
-
-# Apply mesh configuration
-kubectl wait --for=condition=Available deployment/istiod -n istio-system --timeout=300s || true
-kubectl apply -f istio/k8s/mesh-config.yaml
-
-# 2. Deploy Core Database
-echo "Deploying PostgreSQL..."
-kubectl apply -f postgres/k8s/deployment.yaml -n database
-kubectl apply -f postgres/k8s/service.yaml -n database
-echo "Waiting for PostgreSQL..."
-if ! kubectl get deployment postgres -n database >/dev/null 2>&1; then
-    echo "PostgreSQL deployment not found. Current deployments in database namespace:"
-    kubectl get deployments -n database
-    exit 1
-fi
-kubectl rollout status deployment/postgres -n database --timeout=300s
-
-# 3. Deploy Message Broker
-echo "Deploying RabbitMQ..."
-kubectl apply -f rabbitmq/k8s/deployment.yaml -n messaging
-kubectl apply -f rabbitmq/k8s/service.yaml -n messaging
-echo "Waiting for RabbitMQ..."
-if ! kubectl get deployment rabbitmq -n messaging >/dev/null 2>&1; then
-    echo "RabbitMQ deployment not found. Current deployments in messaging namespace:"
-    kubectl get deployments -n messaging
-    exit 1
-fi
-kubectl rollout status deployment/rabbitmq -n messaging --timeout=300s
-
-# 4. Deploy Application Services
-echo "Deploying application services..."
-for service in frontend catalog order search; do
-    echo "Deploying $service service..."
-    kubectl apply -f app/$service/k8s/deployment.yaml
-    kubectl apply -f app/$service/k8s/service.yaml
-    kubectl apply -f app/$service/k8s/hpa.yaml
-
-    echo "Waiting for $service service..."
-    if ! kubectl get deployment "${service}-service" -n ecommerce >/dev/null 2>&1; then
-        echo "${service}-service deployment not found. Current deployments in ecommerce namespace:"
-        kubectl get deployments -n ecommerce
+# Pull and load Istio images
+log_info "Pulling and loading Istio images..."
+for image in "pilot:1.24.1" "proxyv2:1.24.1"; do
+    if docker pull "docker.io/istio/${image}"; then
+        log_success "Pulled istio/${image} ${TICK}"
+        if kind load docker-image "docker.io/istio/${image}" --name "${CLUSTER_NAME}"; then
+            log_success "Loaded istio/${image} into cluster ${TICK}"
+        else
+            log_error "Failed to load istio/${image} into cluster ${CROSS}"
+            exit 1
+        fi
+    else
+        log_error "Failed to pull istio/${image} ${CROSS}"
         exit 1
     fi
-    kubectl rollout status deployment/${service}-service -n ecommerce --timeout=180s
 done
 
-# Apply Authorization Policies
-echo "Applying Authorization Policies..."
-kubectl apply -f istio/k8s/auth-policy.yaml
-
-# 5. Deploy Monitoring Stack (Optional)
-if [ "$DEPLOY_MONITORING" = "true" ]; then
-  echo "Deploying Prometheus..."
-  kubectl apply -f prometheus/prometheus-configmap.yaml -n monitoring
-  kubectl apply -f prometheus/k8s/deployment.yaml -n monitoring
-  kubectl apply -f prometheus/k8s/service.yaml -n monitoring
-  
-  echo "Deploying Grafana..."
-  kubectl apply -f grafana/k8s/deployment.yaml -n monitoring
-  kubectl apply -f grafana/k8s/service.yaml -n monitoring
-  kubectl create configmap grafana-dashboard --from-file=grafana/dashboards/flask-services.json -n monitoring || true
-  kubectl apply -f grafana/k8s/datasource.yaml -n monitoring
-  kubectl apply -f grafana/k8s/dashboard-provisioning.yaml -n monitoring
-  
-  echo "Waiting for monitoring services..."
-  kubectl wait --for=condition=available --timeout=180s deployment --all -n monitoring || true
+# Verify Istio configuration
+log_info "Analyzing Istio configuration..."
+if ! istioctl analyze istio/k8s/deployment.yaml --use-kube=false; then
+    log_error "Istio configuration validation failed ${CROSS}"
+    exit 1
 fi
+log_success "Istio configuration validated ${TICK}"
 
-# 6. Deploy Logging Stack (Optional)
-if [ "$DEPLOY_LOGGING" = "true" ]; then
-  echo "Deploying Elasticsearch..."
-  kubectl apply -f elasticsearch/k8s/deployment.yaml -n logging
-  kubectl apply -f elasticsearch/k8s/service.yaml -n logging
-  echo "Waiting for Elasticsearch..."
-  kubectl rollout status deployment/elasticsearch --timeout=300s -n logging || true
+# Install Istio
+log_info "Installing Istio..."
+if ! istioctl install -f istio/k8s/deployment.yaml --set profile=demo -y; then
+    log_error "Istio installation failed. Running diagnostics... ${CROSS}"
+    istioctl analyze -n istio-system
+    kubectl get pods -n istio-system
+    kubectl get events -n istio-system --sort-by='.lastTimestamp'
+    exit 1
 fi
+log_success "Istio installed successfully ${TICK}"
 
-# Display status
-echo "Current cluster status:"
-kubectl get pods -A
-kubectl get services -A
-kubectl get deployments -A
+# Wait for Istio components
+log_info "Waiting for Istio core components..."
+for component in "istiod" "istio-ingressgateway"; do
+    if kubectl wait --for=condition=ready pod -l app=$component -n istio-system --timeout=300s; then
+        log_success "$component is ready ${TICK}"
+    else
+        log_warning "$component not ready within timeout"
+    fi
+done
 
-# Display resource allocations
-echo "Displaying pod resource allocations..."
-kubectl get pods -A -o custom-columns="NAMESPACE:.metadata.namespace,NAME:.metadata.name,CPU_REQUEST:.spec.containers[*].resources.requests.cpu,CPU_LIMIT:.spec.containers[*].resources.limits.cpu,MEMORY_REQUEST:.spec.containers[*].resources.requests.memory,MEMORY_LIMIT:.spec.containers[*].resources.limits.memory"
+# Configure namespace injection
+log_info "Configuring namespace injection..."
+for ns in default istio-system; do
+    kubectl label namespace $ns istio-injection=disabled --overwrite
+    log_success "Disabled injection for $ns ${TICK}"
+done
+kubectl label namespace ecommerce istio-injection=enabled --overwrite
+log_success "Enabled injection for ecommerce ${TICK}"
 
-# Set up port forwarding for core services
-echo "Setting up port forwarding..."
-kubectl port-forward -n database svc/postgres 5432:5432 &
-kubectl port-forward -n messaging svc/rabbitmq 5672:5672 15672:15672 &
-kubectl port-forward -n istio-system svc/istio-ingressgateway 8080:80 &
-
-# Optional monitoring and logging port forwards
-if [ "$DEPLOY_MONITORING" = "true" ]; then
-  kubectl port-forward -n monitoring svc/prometheus 9090:9090 &
-  kubectl port-forward -n monitoring svc/grafana 3000:3000 &
+# Apply mesh configuration
+log_info "Applying mesh configuration..."
+kubectl wait --for=condition=Available deployment/istiod -n istio-system --timeout=300s
+if kubectl apply -f istio/k8s/mesh-config.yaml; then
+    log_success "Mesh configuration applied ${TICK}"
+else
+    log_error "Failed to apply mesh configuration ${CROSS}"
+    exit 1
 fi
-
-if [ "$DEPLOY_LOGGING" = "true" ]; then
-  kubectl port-forward -n logging svc/elasticsearch 9200:9200 &
-fi
-
-echo "Services are available at:"
-echo "Core Services:"
-echo "- PostgreSQL: localhost:5432"
-echo "- RabbitMQ Management: http://localhost:15672"
-echo "- Istio Gateway: http://localhost:8080"
-
-if [ "$DEPLOY_MONITORING" = "true" ]; then
-  echo "Monitoring:"
-  echo "- Prometheus: http://localhost:9090"
-  echo "- Grafana: http://localhost:3000"
-fi
-
-if [ "$DEPLOY_LOGGING" = "true" ]; then
-  echo "Logging:"
-  echo "- Elasticsearch: http://localhost:9200"
-fi
-
-echo "Deployment complete!"
