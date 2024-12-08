@@ -26,21 +26,21 @@ spec:
           runAsNonRoot: true
           runAsUser: 1337
     ingressGateways:
-    - name: istio-ingressgateway
-      enabled: true
-      k8s:
-        resources:
-          requests:
-            cpu: 100m
-            memory: 128Mi
-          limits:
-            cpu: 500m
-            memory: 512Mi
-        securityContext:
-          fsGroup: 1337
-          runAsGroup: 1337
-          runAsNonRoot: true
-          runAsUser: 1337
+      - name: istio-ingressgateway
+        enabled: true
+        k8s:
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+          securityContext:
+            fsGroup: 1337
+            runAsGroup: 1337
+            runAsNonRoot: true
+            runAsUser: 1337
   values:
     global:
       proxy:
@@ -53,8 +53,6 @@ spec:
             memory: 256Mi
         privileged: false
         enableCoreDump: false
-      tls:
-        minProtocolVersion: TLSV1_3
       proxy_init:
         resources:
           limits:
