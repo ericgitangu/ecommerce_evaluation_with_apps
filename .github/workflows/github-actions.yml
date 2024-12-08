@@ -82,7 +82,7 @@ jobs:
 
       # Step 2: Create k8s Kind Cluster (new clean environment for deploy)
       - name: Create k8s Kind Cluster
-        uses: helm/kind-action@v1.5.0
+        uses: helm/kind-action@v1.9.0
 
       # Step 3: Install Istioctl and Istio (if needed for deploy environment)
       - name: Install Istioctl
