@@ -26,9 +26,9 @@ nodes:
         kind: JoinConfiguration
         nodeRegistration:
           kubeletExtraArgs:
-            system-reserved: memory=1Gi,cpu=500m
-            kube-reserved: memory=1Gi,cpu=500m
-            eviction-hard: memory.available<500Mi
+            system-reserved: memory=2Gi,cpu=1
+            kube-reserved: memory=2Gi,cpu=1
+            eviction-hard: memory.available<1Gi
     extraMounts:
       - hostPath: /tmp/kind-worker-data
         containerPath: /var/lib/containerd
