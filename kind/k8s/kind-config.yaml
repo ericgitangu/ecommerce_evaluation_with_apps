@@ -28,7 +28,6 @@ nodes:
         scheduler:
           extraArgs:
             "v": "2"
-    containerdConfigPatches:
-      - |
-        [plugins."io.containerd.grpc.v1.cri".containerd.runtimes.runc.options]
-          SystemdCgroup = true
+    containerdConfigPatches: |
+      [plugins."io.containerd.grpc.v1.cri".containerd.runtimes.runc.options]
+        SystemdCgroup = true

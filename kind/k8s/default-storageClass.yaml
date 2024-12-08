@@ -1,0 +1,10 @@
+# default-storageclass.yaml
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: standard
+  annotations:
+    storageclass.kubernetes.io/is-default-class: "true"
+provisioner: kind.storage.k8s.io
+parameters:
+  type: gp2
