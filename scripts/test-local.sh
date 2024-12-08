@@ -115,10 +115,78 @@ log_info "Deploying services..."
 ./scripts/deploy-kubectl.sh
 
 log_info "Waiting for all pods to be ready..."
+check_cluster_status() {
+    log_error "Not all pods are ready ${CROSS}"
+    
+    # Node Status
+    log_info "=== Node Status ==="
+    kubectl get nodes -o wide
+    echo
+    
+    # Resource Usage
+    log_info "=== Resource Usage ==="
+    kubectl describe nodes | grep -A 5 "Allocated resources"
+    echo
+    
+    # Pod Status Across All Namespaces
+    log_info "=== Pod Status (All Namespaces) ==="
+    kubectl get pods --all-namespaces -o wide | \
+        awk 'NR==1{print $0}; NR>1{if ($4 != "Running") print $0}'
+    echo
+    
+    # Detailed Pod Status for ecommerce namespace
+    log_info "=== Detailed Pod Status (ecommerce) ==="
+    kubectl get pods -n ecommerce -o custom-columns=\
+"NAME:.metadata.name,\
+STATUS:.status.phase,\
+READY:.status.containerStatuses[*].ready,\
+RESTARTS:.status.containerStatuses[*].restartCount,\
+AGE:.metadata.creationTimestamp"
+    echo
+    
+    # Check for Events
+    log_info "=== Recent Events ==="
+    kubectl get events --sort-by=.metadata.creationTimestamp | tail -n 20
+    echo
+    
+    # Deployment Status
+    log_info "=== Deployment Status ==="
+    kubectl get deployments --all-namespaces -o wide
+    echo
+    
+    # Service Status
+    log_info "=== Service Status ==="
+    kubectl get services --all-namespaces -o wide
+    echo
+    
+    # Check for PVC issues
+    log_info "=== PVC Status ==="
+    kubectl get pvc --all-namespaces
+    echo
+    
+    # Resource Quotas
+    log_info "=== Resource Quotas ==="
+    kubectl get resourcequota --all-namespaces
+    echo
+    
+    # Detailed status for non-running pods
+    log_info "=== Detailed Status for Problematic Pods ==="
+    for ns in $(kubectl get ns -o jsonpath='{.items[*].metadata.name}'); do
+        kubectl get pods -n $ns | grep -v "Running" | grep -v "Completed" | while read pod status rest; do
+            if [ ! -z "$pod" ]; then
+                echo -e "${YELLOW}=== Details for $pod in namespace $ns ===${NC}"
+                kubectl describe pod $pod -n $ns | grep -A 10 "Events:"
+                echo
+            fi
+        done
+    done
+}
+
 if kubectl wait --for=condition=ready pod --all -n ecommerce --timeout=300s; then
     log_success "All pods are ready ${TICK}"
 else
-    log_error "Not all pods are ready ${CROSS}"
+    check_cluster_status
+    exit 1
 fi
 
 log_info "Testing endpoints..."
@@ -129,8 +197,5 @@ for service in frontend catalog search order; do
         log_error "$service health check failed ${CROSS}"
     fi
 done
-
-# Set trap to cleanup on script exit
-trap cleanup EXIT
 
 log_success "Setup complete! ${TICK}"
