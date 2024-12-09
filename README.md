@@ -10,7 +10,7 @@ As per the requirements, the following have been achieved
 1. Debug and deploy the services using provided manifests - each service and 3rd party app has its own manifests files within folders named k8s.
 2. Address issues in the CI/CD pipeline - set up an automated CI/CD pipeline which is passing, click on the badge for more information.
 3. Use logs and metrics to identify and fix issues - using prometheus, integrated grafana and local logs mounted on containers (git excluded for security).
-4. Provide solutions for security and cost optimization - using istio for app mesh for secure intra service interactions (mTLS, RBAC) enabled. Project is using the host ecommerce.local, routes traffic approproately and for cost using light weight containers and a lightweight Kubernetes in docker setup.
+4. Provide solutions for security and cost optimization - using istio for app mesh for secure intra service interactions (mTLS, RBAC, sidecar injection - envoy) enabled. Project is using the host ecommerce.local, routes traffic approproately and for cost using light weight containers and a lightweight Kubernetes in docker setup.
 
 ## Project Structure
 
