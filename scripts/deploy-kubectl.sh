@@ -48,6 +48,19 @@ wait_for_deployment() {
     log_success "Deployment $name is ready ${TICK}"
 }
 
+# Utility: wait for a StatefulSet to be ready, if not print debug info and fail
+wait_for_statefulset() {
+    local name=$1
+    local namespace=$2
+    local timeout=${3:-180s}
+    log_info "Waiting for StatefulSet $name in namespace $namespace..."
+    if ! kubectl rollout status statefulset/$name -n $namespace --timeout=$timeout; then
+        log_error "StatefulSet $name failed to become ready ${CROSS}"
+        exit 1
+    fi
+    log_success "StatefulSet $name is ready ${TICK}"
+}
+
 # Deploy core services (PostgreSQL, RabbitMQ)
 deploy_core_services() {
     log_info "Deploying PostgreSQL..."
@@ -55,7 +68,7 @@ deploy_core_services() {
         log_error "Failed to apply PostgreSQL configuration ${CROSS}"
         exit 1
     fi
-    wait_for_deployment postgres database 300s
+    wait_for_statefulset postgres database 300s
 
     log_info "Deploying RabbitMQ..."
     kubectl apply -f rabbitmq/k8s/deployment.yaml -n messaging

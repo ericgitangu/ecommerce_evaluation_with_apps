@@ -2,6 +2,7 @@
 
 # Print with color
 log_info() { echo -e "${BLUE}INFO:${NC} $1"; }
+log_success() { echo -e "${GREEN}SUCCESS:${NC} $1"; }
 
 # Stop Execution on Error
 set -e
@@ -93,4 +94,4 @@ helm install postgres bitnami/postgresql \
   --create-namespace \
   --timeout 10m
 
-log_info "All services deployed successfully!"
+log_success "All services deployed successfully!"
