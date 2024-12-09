@@ -22,7 +22,118 @@ set -e
 DEPLOY_MONITORING=${DEPLOY_MONITORING:-true}
 DEPLOY_LOGGING=${DEPLOY_LOGGING:-true}
 
-# Create namespaces first
+deploy_core_services() {
+    # 1. Deploy Core Database
+    log_info "Deploying PostgreSQL..."
+    kubectl apply -f postgres/k8s/deployment.yaml -n database
+    kubectl apply -f postgres/k8s/service.yaml -n database
+    log_info "Waiting for PostgreSQL..."
+    if ! kubectl rollout status deployment/postgres -n database --timeout=300s; then
+        log_error "PostgreSQL deployment failed ${CROSS}"
+        kubectl describe deployment postgres -n database
+        return 1
+    fi
+    log_success "PostgreSQL deployed successfully ${TICK}"
+
+    # 2. Deploy Message Broker
+    log_info "Deploying RabbitMQ..."
+    kubectl apply -f rabbitmq/k8s/deployment.yaml -n messaging
+    kubectl apply -f rabbitmq/k8s/service.yaml -n messaging
+    log_info "Waiting for RabbitMQ..."
+    if ! kubectl rollout status deployment/rabbitmq -n messaging --timeout=300s; then
+        log_error "RabbitMQ deployment failed ${CROSS}"
+        kubectl describe deployment rabbitmq -n messaging
+        return 1
+    fi
+    log_success "RabbitMQ deployed successfully ${TICK}"
+
+    return 0
+}
+
+deploy_application_services() {
+    log_info "Deploying application services..."
+    for service in frontend catalog order search; do
+        log_info "Deploying $service service..."
+        kubectl apply -f app/$service/k8s/deployment.yaml
+        kubectl apply -f app/$service/k8s/service.yaml
+        kubectl apply -f app/$service/k8s/hpa.yaml
+        
+        log_info "Waiting for $service service..."
+        if ! kubectl rollout status deployment/${service}-service -n ecommerce --timeout=180s; then
+            log_error "${service} service deployment failed ${CROSS}"
+            kubectl describe deployment/${service}-service -n ecommerce
+            return 1
+        fi
+        log_success "${service} service deployed successfully ${TICK}"
+    done
+
+    log_info "Applying Authorization Policies..."
+    if kubectl apply -f istio/k8s/auth-policy.yaml; then
+        log_success "Authorization policies applied ${TICK}"
+    else
+        log_error "Failed to apply authorization policies ${CROSS}"
+        return 1
+    fi
+
+    return 0
+}
+
+deploy_monitoring() {
+    if [ "$DEPLOY_MONITORING" = "true" ]; then
+        log_info "Deploying monitoring stack..."
+        
+        log_info "Deploying Prometheus..."
+        kubectl apply -f prometheus/prometheus-configmap.yaml -n monitoring
+        kubectl apply -f prometheus/k8s/deployment.yaml -n monitoring
+        kubectl apply -f prometheus/k8s/service.yaml -n monitoring
+        
+        log_info "Deploying Grafana..."
+        kubectl apply -f grafana/k8s/deployment.yaml -n monitoring
+        kubectl apply -f grafana/k8s/service.yaml -n monitoring
+        kubectl create configmap grafana-dashboard --from-file=grafana/dashboards/flask-services.json -n monitoring || true
+        kubectl apply -f grafana/k8s/datasource.yaml -n monitoring
+        kubectl apply -f grafana/k8s/dashboard-provisioning.yaml -n monitoring
+        
+        log_info "Waiting for monitoring services..."
+        if kubectl wait --for=condition=available --timeout=180s deployment --all -n monitoring; then
+            log_success "Monitoring stack deployed successfully ${TICK}"
+        else
+            log_warning "Monitoring stack deployment incomplete ${CROSS}"
+        fi
+    fi
+}
+
+deploy_logging() {
+    if [ "$DEPLOY_LOGGING" = "true" ]; then
+        log_info "Deploying logging stack..."
+        kubectl apply -f elasticsearch/k8s/deployment.yaml -n logging
+        kubectl apply -f elasticsearch/k8s/service.yaml -n logging
+        log_info "Waiting for Elasticsearch..."
+        if kubectl rollout status deployment/elasticsearch --timeout=300s -n logging; then
+            log_success "Logging stack deployed successfully ${TICK}"
+        else
+            log_warning "Logging stack deployment incomplete ${CROSS}"
+        fi
+    fi
+}
+
+setup_port_forwarding() {
+    log_info "Setting up port forwarding..."
+    kubectl port-forward -n database svc/postgres 5432:5432 &
+    kubectl port-forward -n messaging svc/rabbitmq 5672:5672 15672:15672 &
+    kubectl port-forward -n istio-system svc/istio-ingressgateway 8080:80 &
+
+    if [ "$DEPLOY_MONITORING" = "true" ]; then
+        kubectl port-forward -n monitoring svc/prometheus 9090:9090 &
+        kubectl port-forward -n monitoring svc/grafana 3000:3000 &
+    fi
+
+    if [ "$DEPLOY_LOGGING" = "true" ]; then
+        kubectl port-forward -n logging svc/elasticsearch 9200:9200 &
+    fi
+}
+
+# 1. Create namespaces
 log_info "Creating namespaces..."
 for ns in istio-system database messaging ecommerce monitoring logging; do
     if kubectl create namespace "$ns" 2>/dev/null; then
@@ -32,81 +143,80 @@ for ns in istio-system database messaging ecommerce monitoring logging; do
     fi
 done
 
-# Apply secrets early
+# 2. Apply secrets
 log_info "Creating secrets..."
-if kubectl apply -f secrets.yaml -n ecommerce; then
-    log_success "Secrets applied successfully ${TICK}"
-else
+if ! kubectl apply -f secrets.yaml -n ecommerce; then
     log_error "Failed to apply secrets ${CROSS}"
-    # exit 1
+    exit 1
 fi
+log_success "Secrets applied successfully ${TICK}"
 
-# 1. Install Istio First
+# 3. Deploy Istio
 log_info "Setting up Istio..."
 CLUSTER_NAME=$(kubectl config current-context | sed 's/kind-//')
 log_info "Using Kind cluster: ${CLUSTER_NAME}"
 
-# Pull and load Istio images
-log_info "Pulling and loading Istio images..."
 for image in "pilot:1.24.1" "proxyv2:1.24.1"; do
     if docker pull "docker.io/istio/${image}"; then
         log_success "Pulled istio/${image} ${TICK}"
-        if kind load docker-image "docker.io/istio/${image}" --name "${CLUSTER_NAME}"; then
-            log_success "Loaded istio/${image} into cluster ${TICK}"
-        else
-            log_error "Failed to load istio/${image} into cluster ${CROSS}"
-            # exit 1
+        if ! kind load docker-image "docker.io/istio/${image}" --name "${CLUSTER_NAME}"; then
+            log_error "Failed to load istio/${image} ${CROSS}"
+            exit 1
         fi
     else
         log_error "Failed to pull istio/${image} ${CROSS}"
-        # exit 1
+        exit 1
     fi
 done
 
-# Verify Istio configuration
-log_info "Analyzing Istio configuration..."
-if ! istioctl analyze istio/k8s/deployment.yaml --use-kube=false; then
-    log_error "Istio configuration validation failed ${CROSS}"
-    # exit 1
-fi
-log_success "Istio configuration validated ${TICK}"
-
-# Install Istio
-log_info "Installing Istio..."
 if ! istioctl install -f istio/k8s/deployment.yaml --set profile=demo -y; then
-    log_error "Istio installation failed. Running diagnostics... ${CROSS}"
-    istioctl analyze -n istio-system
-    kubectl get pods -n istio-system
-    kubectl get events -n istio-system --sort-by='.lastTimestamp'
-    # exit 1
+    log_error "Istio installation failed ${CROSS}"
+    exit 1
 fi
 log_success "Istio installed successfully ${TICK}"
 
-# Wait for Istio components
-log_info "Waiting for Istio core components..."
-for component in "istiod" "istio-ingressgateway"; do
-    if kubectl wait --for=condition=ready pod -l app=$component -n istio-system --timeout=300s; then
-        log_success "$component is ready ${TICK}"
-    else
-        log_warning "$component not ready within timeout"
-    fi
-done
-
-# Configure namespace injection
-log_info "Configuring namespace injection..."
-for ns in default istio-system; do
-    kubectl label namespace $ns istio-injection=disabled --overwrite
-    log_success "Disabled injection for $ns ${TICK}"
-done
-kubectl label namespace ecommerce istio-injection=enabled --overwrite
-log_success "Enabled injection for ecommerce ${TICK}"
-
-# Apply mesh configuration
-log_info "Applying mesh configuration..."
-kubectl wait --for=condition=Available deployment/istiod -n istio-system --timeout=300s
-if kubectl apply -f istio/k8s/mesh-config.yaml; then
-    log_success "Mesh configuration applied ${TICK}"
-else
-    log_error "Failed to apply mesh configuration ${CROSS}"
-    # exit 1
+# 4. Deploy Core Services
+if ! deploy_core_services; then
+    log_error "Core services deployment failed ${CROSS}"
+    exit 1
 fi
+
+# 5. Deploy Application Services
+if ! deploy_application_services; then
+    log_error "Application services deployment failed ${CROSS}"
+    exit 1
+fi
+
+# 6. Deploy Monitoring (Less essential if we have resource constraints)
+deploy_monitoring
+
+# 7. Deploy Logging (Less essential if we have resource constraints)
+deploy_logging
+
+# 8. Setup Port Forwarding
+setup_port_forwarding
+
+# Display final status
+log_info "Current cluster status:"
+kubectl get pods -A
+kubectl get services -A
+kubectl get deployments -A
+
+log_info "Services are available at:"
+echo "Core Services:"
+echo "- PostgreSQL: localhost:5432"
+echo "- RabbitMQ Management: http://localhost:15672"
+echo "- Istio Gateway: http://localhost:8080"
+
+if [ "$DEPLOY_MONITORING" = "true" ]; then
+    echo "Monitoring:"
+    echo "- Prometheus: http://localhost:9090"
+    echo "- Grafana: http://localhost:3000"
+fi
+
+if [ "$DEPLOY_LOGGING" = "true" ]; then
+    echo "Logging:"
+    echo "- Elasticsearch: http://localhost:9200"
+fi
+
+log_success "Deployment complete! ${TICK}"
