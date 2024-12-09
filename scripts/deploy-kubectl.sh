@@ -75,36 +75,21 @@ wait_for_statefulset() {
 
 # Deploy core services (PostgreSQL, RabbitMQ)
 deploy_core_services() {
-    log_info "Applying secrets..."
-    if ! kubectl apply -f secrets.yaml -n database; then
-        log_error "Failed to apply secrets in the database namespace ${CROSS}"
-        exit 1
-    fi
-    log_success "Secrets applied in the database namespace ${TICK}"
-
-    if ! kubectl apply -f secrets.yaml -n messaging; then
-        log_error "Failed to apply secrets in the messaging namespace ${CROSS}"
-        exit 1
-    fi
-    log_success "Secrets applied in the messaging namespace ${TICK}"
-
-    if ! kubectl apply -f secrets.yaml -n ecommerce; then
-        log_error "Failed to apply secrets in the ecommerce namespace ${CROSS}"
-        exit 1
-    fi
-    log_success "Secrets applied in the ecommerce namespace ${TICK}"
-
-    if ! kubectl apply -f secrets.yaml -n monitoring; then
-        log_error "Failed to apply secrets in the monitoring namespace ${CROSS}"
-        exit 1
-    fi
-    log_success "Secrets applied in the monitoring namespace ${TICK}"
-
-    if ! kubectl apply -f secrets.yaml -n logging; then
-        log_error "Failed to apply secrets in the logging namespace ${CROSS}"
-        exit 1
-    fi
-    log_success "Secrets applied in the logging namespace ${TICK}"
+    # Create secrets for each namespace
+    for ns in database messaging ecommerce monitoring logging; do
+        log_info "Creating secrets in $ns namespace..."
+        if ! kubectl create secret generic service-secrets \
+            --namespace="$ns" \
+            --from-literal=postgres-username=postgres \
+            --from-literal=postgres-password=mysecretpassword \
+            --from-literal=postgres-database=postgres \
+            --dry-run=client -o yaml | kubectl apply -f -
+        then
+            log_error "Failed to create secrets in the $ns namespace ${CROSS}"
+            exit 1
+        fi
+        log_success "Secrets created in $ns namespace ${TICK}"
+    done
 
     log_info "Deploying PostgreSQL..."
     if ! kubectl apply -f postgres/k8s/deployment.yaml -n database; then
