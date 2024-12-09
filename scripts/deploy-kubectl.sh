@@ -56,6 +56,18 @@ wait_for_statefulset() {
     log_info "Waiting for StatefulSet $name in namespace $namespace..."
     if ! kubectl rollout status statefulset/$name -n $namespace --timeout=$timeout; then
         log_error "StatefulSet $name failed to become ready ${CROSS}"
+        log_info "=== StatefulSet Describe ==="
+        kubectl describe statefulset $name -n $namespace || true
+
+        log_info "=== Pods ==="
+        kubectl get pods -n $namespace -l app=$name || true
+
+        log_info "=== Pod Details ==="
+        kubectl describe pods -n $namespace -l app=$name || true
+
+        log_info "=== Pod Logs ==="
+        kubectl logs -n $namespace -l app=$name --tail=50 || true
+
         exit 1
     fi
     log_success "StatefulSet $name is ready ${TICK}"

@@ -94,4 +94,4 @@ helm install postgres bitnami/postgresql \
   --create-namespace \
   --timeout 10m
 
-log_success "All services deployed successfully!"
+log_success "All services installed successfully!"
