@@ -264,6 +264,14 @@ deploy_core_services
 deploy_application_services
 deploy_monitoring
 deploy_logging
+
+log_info "Waiting for all pods to come up before port forwarding..."
+if ! kubectl wait --for=condition=ready pod --all --timeout=300s; then
+    log_error "Not all pods are ready, proceeding with port forwarding anyway ${CROSS}"
+else
+    log_success "All pods are ready, proceeding with port forwarding ${TICK}"
+fi
+
 setup_port_forwarding
 
 log_info "Current cluster status:"
@@ -293,5 +301,36 @@ if [ "$DEPLOY_LOGGING" = "true" ]; then
   echo "Logging:"
   echo "- Elasticsearch: http://localhost:9200"
 fi
+
+log_info "Waiting for all pods to be ready..."
+if ! kubectl wait --for=condition=ready pod --all --timeout=300s; then
+    log_error "Not all pods are ready, proceeding with script anyway ${CROSS}"
+else
+    log_success "All pods are ready, steps completed! ${TICK}"
+fi
+
+log_info "Service IP Addresses:"
+echo "Core Services:"
+kubectl get service -n database postgres-postgresql -o jsonpath='{.spec.clusterIP}' | xargs -I {} echo "- PostgreSQL: {}"
+kubectl get service -n messaging rabbitmq -o jsonpath='{.spec.clusterIP}' | xargs -I {} echo "- RabbitMQ: {}"
+kubectl get service -n istio-system istio-ingressgateway -o jsonpath='{.spec.clusterIP}' | xargs -I {} echo "- Istio Gateway: {}"
+
+echo -e "\nApplication Services:"
+kubectl get service -n ecommerce frontend-service -o jsonpath='{.spec.clusterIP}' | xargs -I {} echo "- Frontend Service: {}"
+kubectl get service -n ecommerce catalog-service -o jsonpath='{.spec.clusterIP}' | xargs -I {} echo "- Catalog Service: {}"
+kubectl get service -n ecommerce search-service -o jsonpath='{.spec.clusterIP}' | xargs -I {} echo "- Search Service: {}"
+kubectl get service -n ecommerce order-service -o jsonpath='{.spec.clusterIP}' | xargs -I {} echo "- Order Service: {}"
+
+if [ "$DEPLOY_MONITORING" = "true" ]; then
+  echo -e "\nMonitoring Services:"
+  kubectl get service -n monitoring prometheus-server -o jsonpath='{.spec.clusterIP}' | xargs -I {} echo "- Prometheus: {}"
+  kubectl get service -n monitoring grafana -o jsonpath='{.spec.clusterIP}' | xargs -I {} echo "- Grafana: {}"
+fi
+
+if [ "$DEPLOY_LOGGING" = "true" ]; then
+  echo -e "\nLogging Services:"
+  kubectl get service -n logging elasticsearch-master -o jsonpath='{.spec.clusterIP}' | xargs -I {} echo "- Elasticsearch: {}"
+fi
+
 
 log_success "Deployment complete! ${TICK}"
