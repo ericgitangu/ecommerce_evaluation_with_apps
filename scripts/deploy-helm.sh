@@ -21,7 +21,7 @@ check_postgres_connection() {
     local max_retries=30
     
     while [ $retries -lt $max_retries ]; do
-        if kubectl exec -n database deploy/postgres-postgresql-0 -- pg_isready -U postgres; then
+        if kubectl exec -n database sts/postgres-postgresql -- pg_isready -U postgres 2>/dev/null; then
             log_success "PostgreSQL is ready ${TICK}"
             return 0
         fi
@@ -31,6 +31,10 @@ check_postgres_connection() {
     done
     
     log_error "PostgreSQL failed to become ready ${CROSS}"
+    log_info "Current PostgreSQL resources:"
+    kubectl get all -n database -l app.kubernetes.io/name=postgresql
+    kubectl describe sts postgres-postgresql -n database
+    kubectl get events -n database --sort-by=.metadata.creationTimestamp | tail -n 20
     return 1
 }
 
