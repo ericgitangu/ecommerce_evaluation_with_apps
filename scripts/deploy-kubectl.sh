@@ -114,6 +114,8 @@ deploy_core_services() {
             --from-literal=postgres-username=postgres \
             --from-literal=postgres-password=mysecretpassword \
             --from-literal=postgres-database=postgres \
+            --from-literal=rabbitmq-username=admin \
+            --from-literal=rabbitmq-password=adminpassword \
             --dry-run=client -o yaml | kubectl apply -f -
         then
             log_error "Failed to create secrets in the $ns namespace ${CROSS}"
