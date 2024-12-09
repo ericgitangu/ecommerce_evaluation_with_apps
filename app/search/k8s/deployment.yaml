@@ -6,10 +6,6 @@ metadata:
   labels:
     app: search-service
 spec:
-  tolerations:
-    - key: "node-role.kubernetes.io/control-plane"
-      operator: "Exists"
-      effect: "NoSchedule"
   replicas: 1
   selector:
     matchLabels:
@@ -19,6 +15,10 @@ spec:
       labels:
         app: search-service
     spec:
+      tolerations:
+        - key: "node-role.kubernetes.io/control-plane"
+          operator: "Exists"
+          effect: "NoSchedule"
       containers:
         - name: search-service
           image: egitangu/search-service:latest
