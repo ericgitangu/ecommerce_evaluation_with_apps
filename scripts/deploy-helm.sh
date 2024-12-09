@@ -1,10 +1,13 @@
 #!/bin/bash
 
+# Print with color
+log_info() { echo -e "${BLUE}INFO:${NC} $1"; }
+
 # Stop Execution on Error
 set -e
 
 # Cleanup existing installations
-echo "Cleaning up existing installations..."
+log_info "Cleaning up existing installations..."
 helm uninstall prometheus-operator -n monitoring --ignore-not-found
 helm uninstall elasticsearch -n logging --ignore-not-found
 helm uninstall rabbitmq -n messaging --ignore-not-found
@@ -13,7 +16,7 @@ helm uninstall grafana -n monitoring --ignore-not-found
 helm uninstall istio-system -n istio-system --ignore-not-found
 
 # Clean up old PVCs
-echo "Cleaning up old PVCs..."
+log_info "Cleaning up old PVCs..."
 kubectl delete pvc --all -n ecommerce --ignore-not-found
 kubectl delete pvc --all -n database --ignore-not-found
 kubectl delete pvc --all -n monitoring --ignore-not-found
@@ -21,7 +24,7 @@ kubectl delete pvc --all -n logging --ignore-not-found
 kubectl delete pvc --all -n messaging --ignore-not-found
 
 # Create namespaces
-echo "Creating namespaces..."
+log_info "Creating namespaces..."
 kubectl create namespace monitoring || true
 kubectl create namespace logging || true
 kubectl create namespace messaging || true
@@ -30,7 +33,7 @@ kubectl create namespace ecommerce || true
 kubectl create namespace istio-system || true
 
 # Add Helm repositories
-echo "Adding Helm repositories..."
+log_info "Adding Helm repositories..."
 helm repo add prometheus-community https://prometheus-community.github.io/helm-charts || true
 helm repo add grafana https://grafana.github.io/helm-charts || true
 helm repo add elastic https://helm.elastic.co || true
@@ -38,7 +41,7 @@ helm repo add bitnami https://charts.bitnami.com/bitnami || true
 helm repo update
 
 # Install Prometheus Operator
-echo "Installing Prometheus Operator..."
+log_info "Installing Prometheus Operator..."
 helm install prometheus-operator prometheus-community/kube-prometheus-stack \
   --namespace monitoring \
   --create-namespace \
@@ -50,20 +53,20 @@ helm install prometheus-operator prometheus-community/kube-prometheus-stack \
   --timeout 10m
 
 # Wait for Prometheus CRDs to be ready
-echo "Waiting for Prometheus CRDs to be ready..."
+log_info "Waiting for Prometheus CRDs to be ready..."
 kubectl wait --for condition=established --timeout=120s crd/servicemonitors.monitoring.coreos.com || true
 kubectl wait --for condition=established --timeout=120s crd/prometheuses.monitoring.coreos.com || true
 kubectl wait --for condition=established --timeout=120s crd/alertmanagers.monitoring.coreos.com || true
 
 # Deploy Elasticsearch
-echo "Deploying Elasticsearch..."
+log_info "Installing Elasticsearch..."
 helm install elasticsearch elastic/elasticsearch \
   --namespace logging \
   --create-namespace \
   --timeout 10m
 
 # Deploy RabbitMQ
-echo "Deploying RabbitMQ..."
+log_info "Installing RabbitMQ..."
 helm install rabbitmq bitnami/rabbitmq \
   --namespace messaging \
   --set auth.username=admin \
@@ -72,7 +75,7 @@ helm install rabbitmq bitnami/rabbitmq \
   --timeout 10m
 
 # Deploy PostgreSQL
-log_info "Deploying PostgreSQL..."
+log_info "Installing PostgreSQL..."
 helm install postgres bitnami/postgresql \
   --namespace database \
   --set auth.postgresPassword=mysecretpassword \
@@ -90,4 +93,4 @@ helm install postgres bitnami/postgresql \
   --create-namespace \
   --timeout 10m
 
-echo "All services deployed successfully!"
+log_info "All services deployed successfully!"
