@@ -19,4 +19,4 @@ COPY . /app/
 EXPOSE 5003
 
 # Run the application
-CMD ["gunicorn", "-b", "0.0.0.0:5003", "app:app"]
+CMD ["gunicorn", "-b", "0.0.0.0:5003", "app:application"]
