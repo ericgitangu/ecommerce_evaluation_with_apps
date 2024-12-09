@@ -18,13 +18,6 @@ log_success() { echo -e "${GREEN}SUCCESS:${NC} $1"; }
 log_warning() { echo -e "${YELLOW}WARNING:${NC} $1"; }
 log_error() { echo -e "${RED}ERROR:${NC} $1"; }
 
-log_info "Applying secrets..."
-if ! kubectl apply -f secrets.yaml -n ecommerce; then
-    log_error "Failed to apply secrets ${CROSS}"
-    exit 1
-fi
-log_success "Secrets applied ${TICK}"
-
 # Environment variables for optional components
 DEPLOY_MONITORING=${DEPLOY_MONITORING:-true}
 DEPLOY_LOGGING=${DEPLOY_LOGGING:-true}
@@ -82,6 +75,13 @@ wait_for_statefulset() {
 
 # Deploy core services (PostgreSQL, RabbitMQ)
 deploy_core_services() {
+    log_info "Applying secrets..."
+if ! kubectl apply -f secrets.yaml -n ecommerce; then
+    log_error "Failed to apply secrets ${CROSS}"
+    exit 1
+    fi
+    log_success "Secrets applied ${TICK}"
+
     log_info "Deploying PostgreSQL..."
     if ! kubectl apply -f postgres/k8s/deployment.yaml -n database; then
         log_error "Failed to apply PostgreSQL configuration ${CROSS}"
@@ -183,13 +183,6 @@ for ns in istio-system database messaging ecommerce monitoring logging; do
         log_info "Namespace $ns already exists ${TICK}"
     fi
 done
-
-log_info "Applying secrets..."
-if ! kubectl apply -f secrets.yaml -n ecommerce; then
-    log_error "Failed to apply secrets ${CROSS}"
-    exit 1
-fi
-log_success "Secrets applied ${TICK}"
 
 log_info "Setting up Istio..."
 CLUSTER_NAME=$(kubectl config current-context | sed 's/kind-//')
