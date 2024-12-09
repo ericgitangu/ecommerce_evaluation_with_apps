@@ -26,7 +26,7 @@ REQUEST_LATENCY = Histogram(
 )
 
 # Database configuration with FQDN
-DB_HOST = os.getenv('POSTGRES_HOST', 'postgres.ecommerce.svc.cluster.local')
+DB_HOST = os.getenv('POSTGRES_HOST', 'postgres-postgresql.database.svc.cluster.local')
 DB_PORT = os.getenv('POSTGRES_PORT', '5432')
 DB_NAME = os.getenv('POSTGRES_DB', 'postgres')
 DB_USER = os.getenv('POSTGRES_USER', 'postgres')
