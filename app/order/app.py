@@ -142,11 +142,13 @@ def create_order():
 @app.route('/metrics')
 def metrics():
     """Metrics endpoint for Prometheus"""
+    logger.info("Metrics endpoint called - order service")
     return generate_latest(), 200, {'Content-Type': CONTENT_TYPE_LATEST}
 
 @app.route('/health')
 def health():
     """Health check endpoint"""
+    logger.info("Health check endpoint called - order service")
     try:
         # Basic application health
         health_status = {

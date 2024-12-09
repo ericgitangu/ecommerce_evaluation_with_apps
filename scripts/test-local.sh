@@ -238,10 +238,9 @@ fi
 
 log_info "Testing endpoints..."
 INGRESS_HOST="localhost"  # Since you're running locally
-INGRESS_PORT="80"        # Default HTTP port for Istio Ingress Gateway
 
 # Test frontend separately as it might have a different path
-if curl -f "http://${INGRESS_HOST}:${INGRESS_PORT}/health"; then
+if curl -f "http://${INGRESS_HOST}/health"; then
     log_success "frontend health check passed ${TICK}"
 else
     log_error "frontend health check failed ${CROSS}"
@@ -249,11 +248,56 @@ fi
 
 # Test other services
 for service in catalog search order; do
-    if curl -f "http://${INGRESS_HOST}:${INGRESS_PORT}/${service}/health"; then
+    if curl -f "http://${INGRESS_HOST}/${service}/health"; then
         log_success "$service health check passed ${TICK}"
     else
         log_error "$service health check failed ${CROSS}"
     fi
 done
+
+# Test other services
+
+
+log_info PostgreSQL
+if curl -f http://localhost:5432; then
+    log_success "PostgreSQL is ready ${TICK}"
+else
+    log_error "PostgreSQL is not ready ${CROSS}"
+fi
+
+log_info RabbitMQ Management
+if curl -f http://localhost:15672; then
+    log_success "RabbitMQ Management is ready ${TICK}"
+else
+    log_error "RabbitMQ Management is not ready ${CROSS}"
+fi
+
+log_info Istio Gateway
+if curl -f http://localhost:8080; then
+    log_success "Istio Gateway is ready ${TICK}"
+else
+    log_error "Istio Gateway is not ready ${CROSS}"
+fi
+
+log_info Prometheus
+if curl -f http://localhost:9090; then
+    log_success "Prometheus is ready ${TICK}"
+else
+    log_error "Prometheus is not ready ${CROSS}"
+fi
+
+log_info Grafana
+if curl -f http://localhost:3000; then
+    log_success "Grafana is ready ${TICK}"
+else
+    log_error "Grafana is not ready ${CROSS}"
+fi
+
+log_info Elasticsearch
+if curl -f http://localhost:9200; then
+    log_success "Elasticsearch is ready ${TICK}"
+else
+    log_error "Elasticsearch is not ready ${CROSS}"
+fi
 
 log_success "Setup complete! ${TICK}"

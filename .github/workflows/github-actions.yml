@@ -6,7 +6,7 @@ on:
       - main
 
 jobs:
-  test:
+  install-deps-and-test:
     runs-on: ubuntu-latest
     steps:
       # Step 1: Checkout Code
@@ -40,8 +40,8 @@ jobs:
           chmod +x ./scripts/test-local.sh
           ./scripts/test-local.sh
 
-  build-and-scan:
-    needs: test
+  build-scan-and-publish:
+    needs: install-deps-and-test
     runs-on: ubuntu-latest
     steps:
       # Step 1: Checkout Code
@@ -74,48 +74,3 @@ jobs:
         uses: aquasecurity/trivy-action@master
         with:
           image-ref: egitangu/order-service:latest
-
-  deploy:
-    needs: build-and-scan
-    runs-on: ubuntu-latest
-    steps:
-      # Step 1: Checkout Code
-      - name: Checkout Code
-        uses: actions/checkout@v3
-
-      # Step 2: Install Kind
-      - name: Install Kind
-        run: |
-          curl -Lo ./kind-binary https://kind.sigs.k8s.io/dl/latest/kind-linux-amd64
-          chmod +x ./kind-binary
-          sudo mv ./kind-binary /usr/local/bin/kind
-          kind version
-
-      # Step 3: Install Istioctl
-      - name: Install Istioctl
-        run: |
-          curl -L https://istio.io/downloadIstioctl | sh -
-          sudo mv $HOME/.istioctl/bin/istioctl /usr/local/bin/istioctl
-
-      # Step 4: Install Kubectl (for deploy environment)
-      - name: Install Kubectl
-        run: |
-          curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
-          sudo install -o root -g root -m 0755 kubectl /usr/local/bin/kubectl
-          kubectl version --client
-
-      # Step 5: Install Helm
-      - name: Install Helm
-        run: curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
-
-      # Step 6: Deploy Third Party Services with Helm
-      - name: Deploy Third Party Services with Helm
-        run: |
-          chmod +x ./scripts/deploy-helm.sh
-          ./scripts/deploy-helm.sh
-
-      # Step 7: Deploy Services with kubectl
-      - name: Deploy Services with kubectl
-        run: |
-          chmod +x ./scripts/deploy-kubectl.sh
-          ./scripts/deploy-kubectl.sh

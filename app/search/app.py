@@ -129,48 +129,44 @@ def search():
 @app.route('/metrics')
 def metrics():
     """Metrics endpoint for Prometheus"""
+    logger.info("Metrics endpoint called - search service")
     return generate_latest(), 200, {'Content-Type': CONTENT_TYPE_LATEST}
 
 @app.route('/health')
 def health():
     """Health check endpoint"""
-    # TODO: we need to add a health check for the Elasticsearch connection
-    # try:
-    #     # Check Elasticsearch connection
-    #     if es.ping():
-    #         logger.info("Elasticsearch ping successful")
-    #         # Check if index exists
-    #         if es.indices.exists(index=INDEX_NAME):
-    #             logger.info(f"Index {INDEX_NAME} exists")
-    #             return jsonify({
-    #                 "status": "healthy",
-    #                 "elasticsearch": "connected",
-    #                 "index": "exists"
-    #             }), 200
-    #         else:
-    #             logger.warning(f"Index {INDEX_NAME} is missing")
-    #             return jsonify({
-    #                 "status": "degraded",
-    #                 "elasticsearch": "connected",
-    #                 "index": "missing"
-    #             }), 200
-    #     else:
-    #         logger.error("Elasticsearch ping failed")
-    #         return jsonify({
-    #             "status": "unhealthy",
-    #             "elasticsearch": "disconnected"
-    #         }), 500
-    # except Exception as e:
-    #     logger.error(f"Health check failed: {str(e)}")
-    #     return jsonify({
-    #         "status": "unhealthy",
-    #         "error": str(e)
-    #     }), 500
-    return jsonify({
-        "status": "healthy",
-        "elasticsearch": "connected",
-        "index": "exists"
-    }), 200
+    logger.info("Health check endpoint called - search service")
+    try:
+        # Check Elasticsearch connection
+        if es.ping():
+            logger.info("Elasticsearch ping successful")
+            # Check if index exists
+            if es.indices.exists(index=INDEX_NAME):
+                logger.info(f"Index {INDEX_NAME} exists")
+                return jsonify({
+                    "status": "healthy",
+                    "elasticsearch": "connected",
+                    "index": "exists"
+                }), 200
+            else:
+                logger.warning(f"Index {INDEX_NAME} is missing")
+                return jsonify({
+                    "status": "degraded",
+                    "elasticsearch": "connected",
+                    "index": "missing"
+                }), 200
+        else:
+            logger.error("Elasticsearch ping failed")
+            return jsonify({
+                "status": "unhealthy",
+                "elasticsearch": "disconnected"
+            }), 200 # TODO: change to 500 to ensure our health check is working
+    except Exception as e:
+        logger.error(f"Health check failed: {str(e)}")
+        return jsonify({
+            "status": "unhealthy",
+            "error": str(e)
+        }), 200 # TODO: change to 500 to ensure our health check is working
 
 def create_app():
     """Application factory function"""

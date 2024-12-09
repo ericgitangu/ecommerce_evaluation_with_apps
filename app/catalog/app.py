@@ -106,6 +106,7 @@ def get_db_connection():
 @app.route('/health')
 def health():
     """Health check endpoint"""
+    logger.info("Health check endpoint called - catalog service")
     try:
         # Test database connection
         with get_db_connection() as conn:
@@ -125,6 +126,7 @@ def health():
 @app.route('/metrics')
 def metrics():
     """Metrics endpoint for Prometheus"""
+    logger.info("Metrics endpoint called - catalog service")
     return generate_latest(), 200, {'Content-Type': CONTENT_TYPE_LATEST}
 
 def create_app():
