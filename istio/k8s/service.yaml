@@ -7,12 +7,12 @@ spec:
   selector:
     istio: ingressgateway
   servers:
-  - port:
-      number: 80
-      name: http
-      protocol: HTTP
-    hosts:
-    - "*"
+    - port:
+        number: 80
+        name: http
+        protocol: HTTP
+      hosts:
+        - "ecommerce.local"
 ---
 apiVersion: networking.istio.io/v1alpha3
 kind: VirtualService
@@ -21,39 +21,39 @@ metadata:
   namespace: ecommerce
 spec:
   hosts:
-  - "*"
+    - "ecommerce.local"
   gateways:
-  - ecommerce-gateway
+    - ecommerce-gateway
   http:
-  - match:
-    - uri:
-        prefix: /catalog
-    route:
-    - destination:
-        host: catalog-service.ecommerce.svc.cluster.local
-        port:
-          number: 5001
-  - match:
-    - uri:
-        prefix: /search
-    route:
-    - destination:
-        host: search-service.ecommerce.svc.cluster.local
-        port:
-          number: 5002
-  - match:
-    - uri:
-        prefix: /order
-    route:
-    - destination:
-        host: order-service.ecommerce.svc.cluster.local
-        port:
-          number: 5003
-  - match:
-    - uri:
-        prefix: /
-    route:
-    - destination:
-        host: frontend-service.ecommerce.svc.cluster.local
-        port:
-          number: 5004
+    - match:
+        - uri:
+            prefix: /catalog
+      route:
+        - destination:
+            host: catalog-service.ecommerce.svc.cluster.local
+            port:
+              number: 5001
+    - match:
+        - uri:
+            prefix: /search
+      route:
+        - destination:
+            host: search-service.ecommerce.svc.cluster.local
+            port:
+              number: 5002
+    - match:
+        - uri:
+            prefix: /order
+      route:
+        - destination:
+            host: order-service.ecommerce.svc.cluster.local
+            port:
+              number: 5003
+    - match:
+        - uri:
+            prefix: /
+      route:
+        - destination:
+            host: frontend-service.ecommerce.svc.cluster.local
+            port:
+              number: 5004

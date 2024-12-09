@@ -300,4 +300,6 @@ else
     log_error "Elasticsearch is not ready ${CROSS}"
 fi
 
+check_cluster_status
+
 log_success "Setup complete! ${TICK}"
