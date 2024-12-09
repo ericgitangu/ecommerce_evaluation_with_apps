@@ -1,20 +1,25 @@
 FROM python:3.9-slim
 
-# Set the working directory
 WORKDIR /app
 
-# Copy the requirements file
-COPY requirements.txt /app/
+# Install system dependencies
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+    build-essential \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy requirements first for better caching
+COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy the application code
-COPY . /app/
+# Copy application code
+COPY . .
 
-# Copy the utils folder
-COPY utils /app/utils/
+# Create logs directory
+RUN mkdir -p /app/logs && \
+    chmod 777 /app/logs
 
-# Expose the port
-EXPOSE 5001
+EXPOSE 5001 8003
 
-# Run the application
-CMD ["python3", "app.py"]
+# Use gunicorn as the entrypoint
+CMD ["gunicorn", "--config", "gunicorn_config.py", "app:application"]
