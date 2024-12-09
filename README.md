@@ -1,6 +1,16 @@
 # E-commerce Microservices Project
 
+[![CI/CD Pipeline](https://github.com/ericgitangu/microservices/actions/workflows/github-actions.yml/badge.svg)](https://github.com/ericgitangu/microservices/actions/workflows/github-actions.yml) [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
 This project implements an e-commerce system using a microservices architecture. Each service is built with Flask, and the project is designed to be cloud-native, leveraging Kubernetes for orchestration and Prometheus and Grafana for observability.
+
+## Achievements:
+
+As per the requirements, the following have been achieved
+1. Debug and deploy the services using provided manifests - each service and 3rd party app has its own manifests files within folders named k8s.
+2. Address issues in the CI/CD pipeline - set up an automated CI/CD pipeline which is passing, click on the badge for more information.
+3. Use logs and metrics to identify and fix issues - using prometheus, integrated grafana and local logs mounted on containers (git excluded for security).
+4. Provide solutions for security and cost optimization - using istio for app mesh for secure intra service interactions (mTLS, RBAC) enabled. Project is using the host ecommerce.local, routes traffic approproately and for cost using light weight containers and a lightweight Kubernetes in docker setup.
 
 ## Project Structure
 
@@ -167,22 +177,22 @@ This project implements an e-commerce system using a microservices architecture.
     - Frontend: <Node_IP>:<Port>
     - Metrics: Access Prometheus and Grafana for system observability. 
 
-## Observability
+### Observability
 
-**Prometheus**:
+#### **Prometheus**
 
-    - Scrapes metrics from the microservices and system components.
-    - Configured with prometheus.yml.
+- Scrapes metrics from the microservices and system components.
+- Configured with prometheus.yml.
 
-**Grafana**:
+#### **Grafana**:
 
-    - Visualizes metrics collected by Prometheus.
-    - Dashboards defined in flask-services.json.
+- Visualizes metrics collected by Prometheus.
+- Dashboards defined in flask-services.json.
 
-**Logging**
+#### **Logging**
     
-    - Local file logging under the folder logs_and_metrics, each service has a volume mount for the logs. 
-    - Configured with utils/logger.py.
+- Local file logging under the folder logs_and_metrics, each service has a volume mount for the logs. 
+- Configured with utils/logger.py.
 
 ## Testing Microservices
 
@@ -230,22 +240,30 @@ This project implements an e-commerce system using a microservices architecture.
 ### Supporting Services
 
 #### Prometheus
+
+(Mmonitoring): Scrapes orders, frontend, search & catalogue for metrics to report.
 - **Port**: 9090
 - **Internal Service Name**: prometheus.monitoring.svc.cluster.local
 - **Access**: http://localhost:9090
 
 #### Grafana
+
+(Observability): Integrates with prometheus, pre-configured dashboards to highlight app level info.
 - **Port**: 3000
 - **Internal Service Name**: grafana.monitoring.svc.cluster.local
 - **Access**: http://localhost:3000
 - **Default Credentials**: admin/admin
 
 #### Elasticsearch
+
+Provides a convenient way to search; we have data folders with some rows for simulating searching.
 - **Port**: 9200
 - **Internal Service Name**: elasticsearch.logging.svc.cluster.local
 - **Access**: http://localhost:9200
 
 #### RabbitMQ
+
+For message brokerage, orders are placed in queue and can be polled for processing and viewed on our dashboard.
 - **Ports**: 
   - 5672 (AMQP)
   - 15672 (Management Interface)
@@ -254,12 +272,16 @@ This project implements an e-commerce system using a microservices architecture.
 - **Default Credentials**: admin/adminpassword
 
 #### PostgreSQL
+
+For ACID persistent storage using a slim version 15 package; for orders.
 - **Port**: 5432
 - **Internal Service Name**: postgres-postgresql.database.svc.cluster.local
 - **Access**: localhost:5432
 - **Default Credentials**: postgres/postgrespass
 
-#### Nginx Ingress
+#### Nginx Ingress (Deprecated)
+
+Deprecated over Istio.
 - **Port**: 80
 - **Internal Service Name**: nginx-ingress.ecommerce.svc.cluster.local
 - **Access**: http://localhost:80
@@ -267,10 +289,14 @@ This project implements an e-commerce system using a microservices architecture.
 
 ## **CI/CD Workflow**
 
-    1. Test: Run a local test with Kind
-    2. Build: Docker images for each service.
-    3. Scan: Vulnerability scanning using Trivy.
-    4. Deploy: Automate deployments using GitHub Actions.
+Steps 1,2 & 3 happen in one step then proceeds to 4,5 & 6 if successful. 
+
+1. Install: Installs helm charts for 3rd parties and install the apps requirements.
+2. Deploy: Specifies the deploy parameters, deploys the services into our Kind cluster.
+3. Test: Run a local test with Kind, this ensures we can create a cluster and operate interoperably with the services.
+4. Build: Docker images for each service locally and load them into our Kind cluster.
+5. Scan: Vulnerability scanning using Trivy - Optional to discover CVE's present.
+6. Publish: Automate publish using GitHub Actions to my public [Dockhub Repo](https://hub.docker.com/repositories/egitangu).
 
 ## **License**
-This project is licensed under the MIT License. See LICENSE for details.
+This project is licensed under the MIT License. See LICENSE for details, credits to Bineyame <bineyame.afework@engie.com>.
