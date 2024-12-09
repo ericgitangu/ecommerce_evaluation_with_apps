@@ -6,4 +6,6 @@ For questions or clarifications:
 
 - Eric Gitangu <developer.ericgitangu#@gmail.com>
 
+TODO: Remember to switch references and change branch to remote: git@github.com:bineyame/ecommerce_evaluation_with_apps.git
+
 Also, see [README](https://github.com/ericgitangu/microservices#README.md)
