@@ -98,15 +98,28 @@ for service in order catalog search frontend; do
     log_info "Building $service service..."
     if docker build -t egitangu/$service-service:latest -f app/$service/Dockerfile app/$service; then
         log_success "Built $service image ${TICK}"
+        
+        # Tag for local Kind use
+        docker tag egitangu/$service-service:latest localhost:5000/$service-service:latest
+        
+        # Load into Kind cluster
         if kind load docker-image egitangu/$service-service:latest --name egitangu-local-cluster; then
             log_success "Loaded $service image into cluster ${TICK}"
+            
+            # Verify image is in Kind
+            if kubectl get nodes -o json | grep -q "egitangu/$service-service"; then
+                log_success "Verified $service image in cluster ${TICK}"
+            else
+                log_error "Failed to verify $service image in cluster ${CROSS}"
+                return 1
+            fi
         else
             log_error "Failed to load $service image ${CROSS}"
-            # exit 1
+            return 1
         fi
     else
         log_error "Failed to build $service image ${CROSS}"
-        # exit 1
+        return 1
     fi
 done
 
@@ -137,11 +150,11 @@ check_cluster_status() {
     # Detailed Pod Status for ecommerce namespace
     log_info "=== Detailed Pod Status (ecommerce) ==="
     kubectl get pods -n ecommerce -o custom-columns=\
-"NAME:.metadata.name,\
-STATUS:.status.phase,\
-READY:.status.containerStatuses[*].ready,\
-RESTARTS:.status.containerStatuses[*].restartCount,\
-AGE:.metadata.creationTimestamp"
+        "NAME:.metadata.name,\
+        STATUS:.status.phase,\
+        READY:.status.containerStatuses[*].ready,\
+        RESTARTS:.status.containerStatuses[*].restartCount,\
+        AGE:.metadata.creationTimestamp"
     echo
     
     # Check for Events

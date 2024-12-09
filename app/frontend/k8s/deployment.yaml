@@ -17,6 +17,7 @@ spec:
         - name: regcred
       containers:
         - name: frontend-service
+          imagePullPolicy: IfNotPresent
           image: egitangu/frontend-service:latest
           ports:
             - containerPort: 5004
