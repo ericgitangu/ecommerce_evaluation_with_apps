@@ -1,5 +1,8 @@
 #!/bin/bash
 
+# Stop execution on error
+set -e
+
 # Color definitions
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -9,57 +12,58 @@ NC='\033[0m'
 TICK="${GREEN}✓${NC}"
 CROSS="${RED}✗${NC}"
 
-# Print with color
+# Logging functions
 log_info() { echo -e "${BLUE}INFO:${NC} $1"; }
 log_success() { echo -e "${GREEN}SUCCESS:${NC} $1"; }
 log_warning() { echo -e "${YELLOW}WARNING:${NC} $1"; }
 log_error() { echo -e "${RED}ERROR:${NC} $1"; }
 
-# Stop execution on error
-set -e
-
 # Environment variables for optional components
 DEPLOY_MONITORING=${DEPLOY_MONITORING:-true}
 DEPLOY_LOGGING=${DEPLOY_LOGGING:-true}
 
+# Utility: wait for a deployment to be ready, if not print debug info and fail
+wait_for_deployment() {
+    local name=$1
+    local namespace=$2
+    local timeout=${3:-180s}
+
+    log_info "Waiting for deployment $name in namespace $namespace..."
+    if ! kubectl rollout status deployment/$name -n $namespace --timeout=$timeout; then
+        log_error "Deployment $name failed to become ready ${CROSS}"
+        log_info "=== Deployment Describe ==="
+        kubectl describe deployment $name -n $namespace || true
+
+        log_info "=== Pods ==="
+        kubectl get pods -n $namespace -l app=$name || true
+
+        log_info "=== Pod Details ==="
+        kubectl describe pods -n $namespace -l app=$name || true
+
+        log_info "=== Pod Logs ==="
+        kubectl logs -n $namespace -l app=$name --tail=50 || true
+
+        exit 1
+    fi
+    log_success "Deployment $name is ready ${TICK}"
+}
+
+# Deploy core services (PostgreSQL, RabbitMQ)
 deploy_core_services() {
-    
-    # 1. Deploy PostgreSQL
     log_info "Deploying PostgreSQL..."
     if ! kubectl apply -f config/database/postgres.yaml; then
         log_error "Failed to apply PostgreSQL configuration ${CROSS}"
-        return 1
+        exit 1
     fi
+    wait_for_deployment postgres database 300s
 
-    # Wait for PostgreSQL StatefulSet
-    if ! kubectl rollout status statefulset/postgres -n database --timeout=300s; then
-        log_error "PostgreSQL StatefulSet rollout failed ${CROSS}"
-        kubectl describe statefulset postgres -n database
-        return 1
-    fi
-
-    # Verify PostgreSQL is ready
-    if ! verify_postgres_deployment; then
-        log_error "PostgreSQL deployment failed ${CROSS}"
-        return 1
-    fi
-    log_success "PostgreSQL deployed successfully ${TICK}"
-
-    # 2. Deploy Message Broker
     log_info "Deploying RabbitMQ..."
     kubectl apply -f rabbitmq/k8s/deployment.yaml -n messaging
     kubectl apply -f rabbitmq/k8s/service.yaml -n messaging
-    log_info "Waiting for RabbitMQ..."
-    if ! kubectl rollout status deployment/rabbitmq -n messaging --timeout=300s; then
-        log_error "RabbitMQ deployment failed ${CROSS}"
-        kubectl describe deployment rabbitmq -n messaging
-        return 1
-    fi
-    log_success "RabbitMQ deployed successfully ${TICK}"
-
-    return 0
+    wait_for_deployment rabbitmq messaging 300s
 }
 
+# Deploy application services (frontend, catalog, order, search)
 deploy_application_services() {
     log_info "Deploying application services..."
     for service in frontend catalog order search; do
@@ -67,42 +71,7 @@ deploy_application_services() {
         kubectl apply -f app/$service/k8s/deployment.yaml
         kubectl apply -f app/$service/k8s/service.yaml
         kubectl apply -f app/$service/k8s/hpa.yaml
-        
-        log_info "Waiting for $service service..."
-
-        if ! check_service_readiness $service; then
-            log_error "${service} service failed readiness check ${CROSS}"
-            # Show detailed debugging information
-            kubectl describe pods -n ecommerce -l app=${service}-service
-            kubectl logs -n ecommerce -l app=${service}-service --tail=50
-            return 1
-        fi
-
-        if ! kubectl rollout status deployment/${service}-service -n ecommerce --timeout=180s; then
-            log_error "${service} service deployment failed ${CROSS}"
-            
-            # Debug information
-            log_info "=== Pod Status ==="
-            kubectl get pods -n ecommerce -l app=${service}-service
-            
-            log_info "=== Pod Logs ==="
-            kubectl logs -n ecommerce -l app=${service}-service --tail=50
-            
-            log_info "=== Pod Description ==="
-            kubectl describe pods -n ecommerce -l app=${service}-service
-            
-            log_info "=== Deployment Status ==="
-            kubectl describe deployment ${service}-service -n ecommerce
-            
-            log_info "=== Events ==="
-            kubectl get events -n ecommerce --sort-by=.lastTimestamp | grep ${service}
-            
-            log_info "=== Image Pull Status ==="
-            kubectl get pods -n ecommerce -l app=${service}-service -o jsonpath='{.items[*].status.containerStatuses[*].imageRef}'
-            
-            return 1
-        fi
-        log_success "${service} service deployed successfully ${TICK}"
+        wait_for_deployment "${service}-service" ecommerce 180s
     done
 
     log_info "Applying Authorization Policies..."
@@ -110,47 +79,48 @@ deploy_application_services() {
         log_success "Authorization policies applied ${TICK}"
     else
         log_error "Failed to apply authorization policies ${CROSS}"
-        return 1
+        exit 1
     fi
-
-    return 0
 }
 
+# Deploy monitoring stack (Prometheus, Grafana)
 deploy_monitoring() {
     if [ "$DEPLOY_MONITORING" = "true" ]; then
         log_info "Deploying monitoring stack..."
-        
+
         log_info "Deploying Prometheus..."
         kubectl apply -f prometheus/prometheus-configmap.yaml -n monitoring
         kubectl apply -f prometheus/k8s/deployment.yaml -n monitoring
         kubectl apply -f prometheus/k8s/service.yaml -n monitoring
-        
+
         log_info "Deploying Grafana..."
         kubectl apply -f grafana/k8s/deployment.yaml -n monitoring
         kubectl apply -f grafana/k8s/service.yaml -n monitoring
         kubectl create configmap grafana-dashboard --from-file=grafana/dashboards/flask-services.json -n monitoring || true
         kubectl apply -f grafana/k8s/datasource.yaml -n monitoring
         kubectl apply -f grafana/k8s/dashboard-provisioning.yaml -n monitoring
-        
-        log_info "Waiting for monitoring services..."
-        if kubectl wait --for=condition=available --timeout=180s deployment --all -n monitoring; then
-            log_success "Monitoring stack deployed successfully ${TICK}"
+
+        log_info "Waiting for monitoring deployments..."
+        # If monitoring fails, just warn; don’t fail the entire pipeline
+        if ! kubectl wait --for=condition=available --timeout=180s deployment --all -n monitoring; then
+            log_warning "Monitoring stack not fully ready ${CROSS}"
         else
-            log_warning "Monitoring stack deployment incomplete ${CROSS}"
+            log_success "Monitoring stack deployed successfully ${TICK}"
         fi
     fi
 }
 
+# Deploy logging stack (Elasticsearch)
 deploy_logging() {
     if [ "$DEPLOY_LOGGING" = "true" ]; then
-        log_info "Deploying logging stack..."
+        log_info "Deploying logging stack (Elasticsearch)..."
         kubectl apply -f elasticsearch/k8s/deployment.yaml -n logging
         kubectl apply -f elasticsearch/k8s/service.yaml -n logging
-        log_info "Waiting for Elasticsearch..."
-        if kubectl rollout status deployment/elasticsearch --timeout=300s -n logging; then
-            log_success "Logging stack deployed successfully ${TICK}"
+        # If Elasticsearch fails, just warn
+        if ! kubectl rollout status deployment/elasticsearch --timeout=300s -n logging; then
+            log_warning "Elasticsearch deployment incomplete ${CROSS}"
         else
-            log_warning "Logging stack deployment incomplete ${CROSS}"
+            log_success "Elasticsearch deployed successfully ${TICK}"
         fi
     fi
 }
@@ -171,42 +141,8 @@ setup_port_forwarding() {
     fi
 }
 
-setup_storage_provisioner() {
-    log_info "Setting up storage provisioner..."
-    
-    # Apply the storage class configuration
-    if ! kubectl apply -f kind/k8s/storage-class.yaml; then
-        log_error "Failed to apply storage class configuration ${CROSS}"
-        return 1
-    fi
-    log_success "Storage class configured ${TICK}"
+# Main execution flow
 
-    # Apply the local path provisioner
-    if ! kubectl apply -f https://raw.githubusercontent.com/rancher/local-path-provisioner/master/deploy/local-path-storage.yaml; then
-        log_error "Failed to apply local path provisioner ${CROSS}"
-        return 1
-    fi
-    log_success "Local path provisioner applied ${TICK}"
-
-    # Wait for the provisioner to be ready
-    if ! kubectl wait --for=condition=ready pod -l app=local-path-provisioner -n local-path-storage --timeout=60s; then
-        log_error "Storage provisioner setup failed ${CROSS}"
-        # Show provisioner pod status for debugging
-        kubectl describe pods -n local-path-storage -l app=local-path-provisioner
-        return 1
-    fi
-    
-    # Verify storage class is set as default
-    if ! kubectl get storageclass standard -o jsonpath='{.metadata.annotations.storageclass\.kubernetes\.io/is-default-class}' | grep -q "true"; then
-        log_error "Storage class 'standard' is not set as default ${CROSS}"
-        return 1
-    fi
-    
-    log_success "Storage provisioner setup complete ${TICK}"
-    return 0
-}
-
-# 1. Create namespaces
 log_info "Creating namespaces..."
 for ns in istio-system database messaging ecommerce monitoring logging; do
     if kubectl create namespace "$ns" 2>/dev/null; then
@@ -216,60 +152,53 @@ for ns in istio-system database messaging ecommerce monitoring logging; do
     fi
 done
 
-# 2. Apply secrets
-log_info "Creating secrets..."
+log_info "Applying secrets..."
 if ! kubectl apply -f secrets.yaml -n ecommerce; then
     log_error "Failed to apply secrets ${CROSS}"
     exit 1
 fi
-log_success "Secrets applied successfully ${TICK}"
+log_success "Secrets applied ${TICK}"
 
-# 3. Deploy Istio
 log_info "Setting up Istio..."
 CLUSTER_NAME=$(kubectl config current-context | sed 's/kind-//')
 log_info "Using Kind cluster: ${CLUSTER_NAME}"
 
+# Pull Istio images
 for image in "pilot:1.24.1" "proxyv2:1.24.1"; do
-    if docker pull "docker.io/istio/${image}"; then
-        log_success "Pulled istio/${image} ${TICK}"
-        if ! kind load docker-image "docker.io/istio/${image}" --name "${CLUSTER_NAME}"; then
-            log_error "Failed to load istio/${image} ${CROSS}"
-            exit 1
-        fi
-    else
-        log_error "Failed to pull istio/${image} ${CROSS}"
+    if ! docker pull "docker.io/istio/$image"; then
+        log_error "Failed to pull istio/$image ${CROSS}"
         exit 1
     fi
+    if ! kind load docker-image "docker.io/istio/$image" --name "${CLUSTER_NAME}"; then
+        log_error "Failed to load istio/$image into Kind ${CROSS}"
+        exit 1
+    fi
+    log_success "Loaded istio/$image into Kind ${TICK}"
 done
 
 if ! istioctl install -f istio/k8s/deployment.yaml --set profile=demo -y; then
     log_error "Istio installation failed ${CROSS}"
     exit 1
 fi
-log_success "Istio installed successfully ${TICK}"
+log_success "Istio installed ${TICK}"
 
-# 4. Deploy Core Services
-if ! deploy_core_services; then
-    log_error "Core services deployment failed ${CROSS}"
-    exit 1
-fi
+log_info "Waiting for Istio core components..."
+kubectl wait --for=condition=ready pod -l app=istiod -n istio-system --timeout=300s || true
+kubectl wait --for=condition=ready pod -l app=istio-ingressgateway -n istio-system --timeout=300s || true
 
-# 5. Deploy Application Services
-if ! deploy_application_services; then
-    log_error "Application services deployment failed ${CROSS}"
-    exit 1
-fi
+kubectl label namespace default istio-injection=disabled --overwrite
+kubectl label namespace istio-system istio-injection=disabled --overwrite
+kubectl label namespace ecommerce istio-injection=enabled --overwrite
 
-# 6. Deploy Monitoring (Less essential if we have resource constraints)
+kubectl wait --for=condition=Available deployment/istiod -n istio-system --timeout=300s || true
+kubectl apply -f istio/k8s/mesh-config.yaml
+
+deploy_core_services
+deploy_application_services
 deploy_monitoring
-
-# 7. Deploy Logging (Less essential if we have resource constraints)
 deploy_logging
-
-# 8. Setup Port Forwarding
 setup_port_forwarding
 
-# Display final status
 log_info "Current cluster status:"
 kubectl get pods -A
 kubectl get services -A
@@ -280,139 +209,14 @@ echo "Core Services:"
 echo "- PostgreSQL: localhost:5432"
 echo "- RabbitMQ Management: http://localhost:15672"
 echo "- Istio Gateway: http://localhost:8080"
-
 if [ "$DEPLOY_MONITORING" = "true" ]; then
-    echo "Monitoring:"
-    echo "- Prometheus: http://localhost:9090"
-    echo "- Grafana: http://localhost:3000"
+  echo "Monitoring:"
+  echo "- Prometheus: http://localhost:9090"
+  echo "- Grafana: http://localhost:3000"
 fi
-
 if [ "$DEPLOY_LOGGING" = "true" ]; then
-    echo "Logging:"
-    echo "- Elasticsearch: http://localhost:9200"
+  echo "Logging:"
+  echo "- Elasticsearch: http://localhost:9200"
 fi
 
 log_success "Deployment complete! ${TICK}"
-
-check_pod_status() {
-    local service=$1
-    log_info "Checking pod status for ${service}..."
-    
-    # Check pod status
-    local pod_status=$(kubectl get pods -n ecommerce -l app=${service}-service -o jsonpath='{.items[0].status.phase}')
-    local container_status=$(kubectl get pods -n ecommerce -l app=${service}-service -o jsonpath='{.items[0].status.containerStatuses[0].ready}')
-    
-    if [[ "$pod_status" != "Running" ]]; then
-        log_error "Pod is not running. Current status: $pod_status ${CROSS}"
-        # Check for events related to this pod
-        kubectl get events -n ecommerce --field-selector involvedObject.kind=Pod,involvedObject.name=$(kubectl get pods -n ecommerce -l app=${service}-service -o jsonpath='{.items[0].metadata.name}') --sort-by='.lastTimestamp'
-        return 1
-    fi
-    
-    if [[ "$container_status" != "true" ]]; then
-        log_error "Container is not ready ${CROSS}"
-        # Get container logs
-        kubectl logs -n ecommerce -l app=${service}-service --tail=50
-        return 1
-    fi
-    
-    log_success "Pod for ${service} is running and ready ${TICK}"
-    return 0
-}
-
-check_service_readiness() {
-    local service=$1
-    local max_retries=30
-    local retry_count=0
-    
-    while [ $retry_count -lt $max_retries ]; do
-        if kubectl get pods -n ecommerce -l app=${service}-service -o jsonpath='{.items[0].status.containerStatuses[0].ready}' | grep -q "true"; then
-            log_success "${service} service is ready ${TICK}"
-            return 0
-        fi
-        
-        retry_count=$((retry_count + 1))
-        log_info "Waiting for ${service} service to be ready... (attempt $retry_count/$max_retries)"
-        
-        # Show recent logs
-        kubectl logs -n ecommerce -l app=${service}-service --tail=20 || true
-        
-        sleep 10
-    done
-    
-    log_error "${service} service failed to become ready ${CROSS}"
-    return 1
-}
-
-verify_postgres_deployment() {
-    log_info "Verifying PostgreSQL deployment..."
-    local max_retries=30
-    local retry_count=0
-
-    # Check StatefulSet status
-    if ! kubectl rollout status statefulset/postgres -n database --timeout=300s; then
-        log_error "PostgreSQL StatefulSet failed to roll out ${CROSS}"
-        kubectl describe statefulset postgres -n database
-        return 1
-    fi
-
-    # Check PVC status
-    local pvc_status
-    while [ $retry_count -lt $max_retries ]; do
-        pvc_status=$(kubectl get pvc postgres-data-postgres-0 -n database -o jsonpath='{.status.phase}' 2>/dev/null)
-        
-        if [[ "$pvc_status" == "Bound" ]]; then
-            log_success "PostgreSQL PVC is bound ${TICK}"
-            break
-        fi
-        
-        retry_count=$((retry_count + 1))
-        log_info "Waiting for PostgreSQL PVC to be bound... (attempt $retry_count/$max_retries)"
-        sleep 10
-    done
-
-    if [[ "$pvc_status" != "Bound" ]]; then
-        log_error "PostgreSQL PVC failed to bind ${CROSS}"
-        kubectl describe pvc postgres-data-postgres-0 -n database
-        return 1
-    fi
-
-    # Check pod readiness
-    retry_count=0
-    while [ $retry_count -lt $max_retries ]; do
-        if kubectl get pods -n database -l app=postgres -o jsonpath='{.items[0].status.containerStatuses[0].ready}' | grep -q "true"; then
-            break
-        fi
-        
-        retry_count=$((retry_count + 1))
-        log_info "Waiting for PostgreSQL pod to be ready... (attempt $retry_count/$max_retries)"
-        
-        # Show pod status and recent logs
-        kubectl get pods -n database -l app=postgres
-        kubectl logs -n database -l app=postgres --tail=20 || true
-        
-        sleep 10
-    done
-
-    # Final connection test
-    retry_count=0
-    while [ $retry_count -lt $max_retries ]; do
-        if kubectl exec -n database statefulset/postgres -- pg_isready -U postgres 2>/dev/null; then
-            log_success "PostgreSQL is ready and accepting connections ${TICK}"
-            return 0
-        fi
-        
-        retry_count=$((retry_count + 1))
-        log_info "Waiting for PostgreSQL to accept connections... (attempt $retry_count/$max_retries)"
-        sleep 10
-    done
-
-    # If we get here, verification failed
-    log_error "PostgreSQL verification failed ${CROSS}"
-    log_info "=== PostgreSQL Status ==="
-    kubectl get all -n database -l app=postgres
-    kubectl describe statefulset postgres -n database
-    kubectl describe pods -n database -l app=postgres
-    kubectl get events -n database --sort-by=.metadata.creationTimestamp | tail -n 20
-    return 1
-}
