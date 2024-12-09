@@ -23,17 +23,24 @@ DEPLOY_MONITORING=${DEPLOY_MONITORING:-true}
 DEPLOY_LOGGING=${DEPLOY_LOGGING:-true}
 
 deploy_core_services() {
-    # PostgreSQL is handled by Helm in deploy-helm.sh
     
     # 1. Deploy PostgreSQL
     log_info "Deploying PostgreSQL..."
-    setup_storage_provisioner
-    kubectl apply -f postgres/k8s/deployment.yaml -n database
-    kubectl apply -f postgres/k8s/service.yaml -n database
-    log_info "Waiting for PostgreSQL..."
-    if ! kubectl rollout status deployment/postgres -n database --timeout=300s; then
+    if ! kubectl apply -f config/database/postgres.yaml; then
+        log_error "Failed to apply PostgreSQL configuration ${CROSS}"
+        return 1
+    fi
+
+    # Wait for PostgreSQL StatefulSet
+    if ! kubectl rollout status statefulset/postgres -n database --timeout=300s; then
+        log_error "PostgreSQL StatefulSet rollout failed ${CROSS}"
+        kubectl describe statefulset postgres -n database
+        return 1
+    fi
+
+    # Verify PostgreSQL is ready
+    if ! verify_postgres_deployment; then
         log_error "PostgreSQL deployment failed ${CROSS}"
-        kubectl describe deployment postgres -n database
         return 1
     fi
     log_success "PostgreSQL deployed successfully ${TICK}"
@@ -334,5 +341,78 @@ check_service_readiness() {
     done
     
     log_error "${service} service failed to become ready ${CROSS}"
+    return 1
+}
+
+verify_postgres_deployment() {
+    log_info "Verifying PostgreSQL deployment..."
+    local max_retries=30
+    local retry_count=0
+
+    # Check StatefulSet status
+    if ! kubectl rollout status statefulset/postgres -n database --timeout=300s; then
+        log_error "PostgreSQL StatefulSet failed to roll out ${CROSS}"
+        kubectl describe statefulset postgres -n database
+        return 1
+    fi
+
+    # Check PVC status
+    local pvc_status
+    while [ $retry_count -lt $max_retries ]; do
+        pvc_status=$(kubectl get pvc postgres-data-postgres-0 -n database -o jsonpath='{.status.phase}' 2>/dev/null)
+        
+        if [[ "$pvc_status" == "Bound" ]]; then
+            log_success "PostgreSQL PVC is bound ${TICK}"
+            break
+        fi
+        
+        retry_count=$((retry_count + 1))
+        log_info "Waiting for PostgreSQL PVC to be bound... (attempt $retry_count/$max_retries)"
+        sleep 10
+    done
+
+    if [[ "$pvc_status" != "Bound" ]]; then
+        log_error "PostgreSQL PVC failed to bind ${CROSS}"
+        kubectl describe pvc postgres-data-postgres-0 -n database
+        return 1
+    fi
+
+    # Check pod readiness
+    retry_count=0
+    while [ $retry_count -lt $max_retries ]; do
+        if kubectl get pods -n database -l app=postgres -o jsonpath='{.items[0].status.containerStatuses[0].ready}' | grep -q "true"; then
+            break
+        fi
+        
+        retry_count=$((retry_count + 1))
+        log_info "Waiting for PostgreSQL pod to be ready... (attempt $retry_count/$max_retries)"
+        
+        # Show pod status and recent logs
+        kubectl get pods -n database -l app=postgres
+        kubectl logs -n database -l app=postgres --tail=20 || true
+        
+        sleep 10
+    done
+
+    # Final connection test
+    retry_count=0
+    while [ $retry_count -lt $max_retries ]; do
+        if kubectl exec -n database statefulset/postgres -- pg_isready -U postgres 2>/dev/null; then
+            log_success "PostgreSQL is ready and accepting connections ${TICK}"
+            return 0
+        fi
+        
+        retry_count=$((retry_count + 1))
+        log_info "Waiting for PostgreSQL to accept connections... (attempt $retry_count/$max_retries)"
+        sleep 10
+    done
+
+    # If we get here, verification failed
+    log_error "PostgreSQL verification failed ${CROSS}"
+    log_info "=== PostgreSQL Status ==="
+    kubectl get all -n database -l app=postgres
+    kubectl describe statefulset postgres -n database
+    kubectl describe pods -n database -l app=postgres
+    kubectl get events -n database --sort-by=.metadata.creationTimestamp | tail -n 20
     return 1
 }

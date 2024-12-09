@@ -1,10 +1,11 @@
 # Deployment manifest for PostgreSQL
 apiVersion: apps/v1
-kind: Deployment
+kind: StatefulSet
 metadata:
   name: postgres
   namespace: database
 spec:
+  serviceName: postgres
   replicas: 1
   selector:
     matchLabels:
@@ -17,13 +18,8 @@ spec:
       containers:
         - name: postgres
           image: postgres:15-alpine
-          resources:
-            limits:
-              cpu: "500m"
-              memory: "512Mi"
-            requests:
-              cpu: "200m"
-              memory: "256Mi"
+          ports:
+            - containerPort: 5432
           env:
             - name: POSTGRES_PASSWORD
               valueFrom:
@@ -35,5 +31,38 @@ spec:
                 secretKeyRef:
                   name: service-secrets
                   key: postgres-username
-          ports:
-            - containerPort: 5432
+            - name: POSTGRES_DB
+              valueFrom:
+                secretKeyRef:
+                  name: service-secrets
+                  key: postgres-database
+          resources:
+            requests:
+              cpu: 200m
+              memory: 256Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+          volumeMounts:
+            - name: postgres-data
+              mountPath: /var/lib/postgresql/data
+          readinessProbe:
+            exec:
+              command: ["pg_isready", "-U", "postgres"]
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            timeoutSeconds: 5
+          livenessProbe:
+            exec:
+              command: ["pg_isready", "-U", "postgres"]
+            initialDelaySeconds: 30
+            periodSeconds: 20
+            timeoutSeconds: 5
+  volumeClaimTemplates:
+    - metadata:
+        name: postgres-data
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        resources:
+          requests:
+            storage: "1Gi"
