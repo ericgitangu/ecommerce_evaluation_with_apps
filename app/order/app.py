@@ -1,14 +1,15 @@
 from flask import Flask, jsonify, request
 import pika
 import psycopg2
-from prometheus_client import start_http_server, Counter, Histogram, generate_latest, CONTENT_TYPE_LATEST
+from prometheus_client import Counter, Histogram, generate_latest, CONTENT_TYPE_LATEST
 import os
-import logging
 import time
 import sys
 import uuid
 from datetime import datetime
 import json
+
+# Add the project root to the Python path
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from utils.logger import setup_logger
 
@@ -177,6 +178,14 @@ def health():
             "error": str(e)
         }), 500
 
+def create_app():
+    """Application factory function"""
+    logger.info("Creating app for Gunicorn: %s", app)
+    return app
+
+# For Gunicorn
+application = create_app()
+
 if __name__ == "__main__":
     # Initialize database
     init_db()
@@ -185,4 +194,4 @@ if __name__ == "__main__":
     # start_http_server(8003)
     
     # Start Flask app
-    app.run(host="0.0.0.0", port=5003)
+    application.run(host="0.0.0.0", port=5003)
