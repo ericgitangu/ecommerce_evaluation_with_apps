@@ -13,8 +13,10 @@ spec:
       labels:
         app: frontend-service
     spec:
-      imagePullSecrets:
-        - name: regcred
+      tolerations:
+        - key: "node-role.kubernetes.io/control-plane"
+          operator: "Exists"
+          effect: "NoSchedule"
       containers:
         - name: frontend-service
           imagePullPolicy: IfNotPresent
@@ -39,11 +41,11 @@ spec:
             failureThreshold: 3
           resources:
             limits:
-              memory: "256Mi"
-              cpu: "200m"
-            requests:
               memory: "128Mi"
               cpu: "100m"
+            requests:
+              memory: "64Mi"
+              cpu: "50m"
           env:
             - name: RABBITMQ_HOST
               value: rabbitmq.messaging.svc.cluster.local
