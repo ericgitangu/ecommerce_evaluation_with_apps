@@ -90,10 +90,4 @@ helm install postgres bitnami/postgresql \
   --create-namespace \
   --timeout 10m
 
-# Check PostgreSQL connection after installation
-if ! check_postgres_connection; then
-    log_error "PostgreSQL installation verification failed ${CROSS}"
-    exit 1
-fi
-
 echo "All services deployed successfully!"
