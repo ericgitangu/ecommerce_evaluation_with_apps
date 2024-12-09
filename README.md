@@ -199,17 +199,17 @@ As per the requirements, the following have been achieved
 To run this project locally you can use the following script: 
 
 **Requirements**:
-    1. Kind
-    2. Kubectl
-    3. Istioctl
-    4. Helm
+- Kind
+- Kubectl
+- Istioctl
+- Helm
 
-    Run Locally:
+Run Locally:
 
     ```bash
       ./scripts/test-local.sh
     ```
- Worth looking at the deploy-helm.sh that consolidates all of our helm installations and deploy-kubectl.sh that consolidates all of our deployment, service, hpa and configuration manifests applies them to deploy our apps and 3rd party dependencies to better understand how the test script works.
+It is Worth looking at the deploy-helm.sh that consolidates all of our helm installations and deploy-kubectl.sh that consolidates all of our deployment, service, hpa and configuration manifests applies them to deploy our apps and 3rd party dependencies to better understand how the test script works.
 
 ## Service Endpoints and Ports
 
