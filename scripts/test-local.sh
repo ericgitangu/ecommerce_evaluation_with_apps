@@ -93,35 +93,42 @@ else
     # exit 1
 fi
 
-log_info "Loading Docker images into Kind..."
-for service in order catalog search frontend; do
-    log_info "Building $service service..."
-    if docker build -t egitangu/$service-service:latest -f app/$service/Dockerfile app/$service; then
-        log_success "Built $service image ${TICK}"
-        
-        # Tag for local Kind use
-        docker tag egitangu/$service-service:latest localhost:5000/$service-service:latest
-        
-        # Load into Kind cluster
-        if kind load docker-image egitangu/$service-service:latest --name egitangu-local-cluster; then
-            log_success "Loaded $service image into cluster ${TICK}"
+# Function to load images into Kind
+load_images_to_kind() {
+    log_info "Loading Docker images into Kind..."
+    for service in order catalog search frontend; do
+        log_info "Building $service service..."
+        if docker build -t egitangu/$service-service:latest -f app/$service/Dockerfile app/$service; then
+            log_success "Built $service image ${TICK}"
             
-            # Verify image is in Kind
-            if kubectl get nodes -o json | grep -q "egitangu/$service-service"; then
-                log_success "Verified $service image in cluster ${TICK}"
+            # Load into Kind cluster
+            if kind load docker-image egitangu/$service-service:latest --name egitangu-local-cluster; then
+                log_success "Loaded $service image into cluster ${TICK}"
+                
+                # Verify image is in Kind
+                if kubectl get nodes -o json | grep -q "egitangu/$service-service"; then
+                    log_success "Verified $service image in cluster ${TICK}"
+                else
+                    log_error "Failed to verify $service image in cluster ${CROSS}"
+                    return 1
+                fi
             else
-                log_error "Failed to verify $service image in cluster ${CROSS}"
+                log_error "Failed to load $service image ${CROSS}"
                 return 1
             fi
         else
-            log_error "Failed to load $service image ${CROSS}"
+            log_error "Failed to build $service image ${CROSS}"
             return 1
         fi
-    else
-        log_error "Failed to build $service image ${CROSS}"
-        return 1
-    fi
-done
+    done
+    return 0
+}
+
+# Call the function where we previously had the direct loop
+if ! load_images_to_kind; then
+    log_error "Failed to load images into Kind ${CROSS}"
+    exit 1
+fi
 
 log_info "Deploying services..."
 ./scripts/deploy-helm.sh
