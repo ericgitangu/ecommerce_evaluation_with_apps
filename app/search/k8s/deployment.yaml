@@ -33,7 +33,34 @@ spec:
           ports:
             - containerPort: 5002
           env:
+            - name: ELASTICSEARCH_HOST
+              value: "elasticsearch.logging.svc.cluster.local"
+            - name: ELASTICSEARCH_PORT
+              value: "9200"
+            - name: POSTGRES_HOST
+              value: "postgres.database.svc.cluster.local"
+            - name: POSTGRES_PORT
+              value: "5432"
+            - name: POSTGRES_DB
+              valueFrom:
+                secretKeyRef:
+                  name: service-secrets
+                  key: postgres-database
+            - name: POSTGRES_USER
+              valueFrom:
+                secretKeyRef:
+                  name: service-secrets
+                  key: postgres-username
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: service-secrets
+                  key: postgres-password
             - name: RABBITMQ_HOST
+              value: "rabbitmq.messaging.svc.cluster.local"
+            - name: RABBITMQ_PORT
+              value: "5672"
+            - name: RABBITMQ_USERNAME
               valueFrom:
                 secretKeyRef:
                   name: service-secrets

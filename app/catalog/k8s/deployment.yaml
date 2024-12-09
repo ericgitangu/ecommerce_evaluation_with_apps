@@ -33,11 +33,25 @@ spec:
           ports:
             - containerPort: 5001
           env:
-            - name: DATABASE_URL
+            - name: POSTGRES_HOST
+              value: "postgres.database.svc.cluster.local"
+            - name: POSTGRES_PORT
+              value: "5432"
+            - name: POSTGRES_DB
               valueFrom:
                 secretKeyRef:
                   name: service-secrets
-                  key: postgres-url
+                  key: postgres-database
+            - name: POSTGRES_USER
+              valueFrom:
+                secretKeyRef:
+                  name: service-secrets
+                  key: postgres-username
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: service-secrets
+                  key: postgres-password
           readinessProbe:
             httpGet:
               path: /health
