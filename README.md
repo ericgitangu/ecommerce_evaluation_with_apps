@@ -196,11 +196,20 @@ As per the requirements, the following have been achieved
 
 ## Testing Microservices
 
+To run this project locally you can use the following script: 
+
+**Requirements**:
+    1. Kind
+    2. Kubectl
+    3. Istioctl
+    4. Helm
+
     Run Locally:
 
     ```bash
       ./scripts/test-local.sh
     ```
+ Worth looking at the deploy-helm.sh that consolidates all of our helm installations and deploy-kubectl.sh that consolidates all of our deployment, service, hpa and configuration manifests applies them to deploy our apps and 3rd party dependencies to better understand how the test script works.
 
 ## Service Endpoints and Ports
 
@@ -281,7 +290,7 @@ For ACID persistent storage using a slim version 15 package; for orders.
 
 #### Nginx Ingress (Deprecated)
 
-Deprecated over Istio.
+**Deprecated** over Istio, the folders and the deploy and service configs are still available.
 - **Port**: 80
 - **Internal Service Name**: nginx-ingress.ecommerce.svc.cluster.local
 - **Access**: http://localhost:80
