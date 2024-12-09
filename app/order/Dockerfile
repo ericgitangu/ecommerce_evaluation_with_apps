@@ -13,7 +13,11 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY utils /app/utils/
 
 # Copy the application code
-COPY . /app/
+COPY . .
+
+# Create logs directory
+RUN mkdir -p /app/logs && \
+    chmod 777 /app/logs
 
 # Expose the port
 EXPOSE 5003
