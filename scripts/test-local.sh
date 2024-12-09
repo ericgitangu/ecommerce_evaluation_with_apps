@@ -237,8 +237,19 @@ else
 fi
 
 log_info "Testing endpoints..."
-for service in frontend catalog search order; do
-    if curl -f http://localhost/${service#frontend/}/health; then
+INGRESS_HOST="localhost"  # Since you're running locally
+INGRESS_PORT="80"        # Default HTTP port for Istio Ingress Gateway
+
+# Test frontend separately as it might have a different path
+if curl -f "http://${INGRESS_HOST}:${INGRESS_PORT}/health"; then
+    log_success "frontend health check passed ${TICK}"
+else
+    log_error "frontend health check failed ${CROSS}"
+fi
+
+# Test other services
+for service in catalog search order; do
+    if curl -f "http://${INGRESS_HOST}:${INGRESS_PORT}/${service}/health"; then
         log_success "$service health check passed ${TICK}"
     else
         log_error "$service health check failed ${CROSS}"
