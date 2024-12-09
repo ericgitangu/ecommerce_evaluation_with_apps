@@ -51,7 +51,7 @@ wait_for_deployment() {
 # Deploy core services (PostgreSQL, RabbitMQ)
 deploy_core_services() {
     log_info "Deploying PostgreSQL..."
-    if ! kubectl apply -f config/database/postgres.yaml; then
+    if ! kubectl apply -f postgres/k8s/deployment.yaml -n database; then
         log_error "Failed to apply PostgreSQL configuration ${CROSS}"
         exit 1
     fi
