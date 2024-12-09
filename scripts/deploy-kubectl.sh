@@ -24,7 +24,19 @@ DEPLOY_LOGGING=${DEPLOY_LOGGING:-true}
 
 deploy_core_services() {
     # PostgreSQL is handled by Helm in deploy-helm.sh
-    log_info "Skipping PostgreSQL deployment (handled by Helm) ${TICK}"
+    
+    # 1. Deploy PostgreSQL
+    log_info "Deploying PostgreSQL..."
+    setup_storage_provisioner
+    kubectl apply -f postgres/k8s/deployment.yaml -n database
+    kubectl apply -f postgres/k8s/service.yaml -n database
+    log_info "Waiting for PostgreSQL..."
+    if ! kubectl rollout status deployment/postgres -n database --timeout=300s; then
+        log_error "PostgreSQL deployment failed ${CROSS}"
+        kubectl describe deployment postgres -n database
+        return 1
+    fi
+    log_success "PostgreSQL deployed successfully ${TICK}"
 
     # 2. Deploy Message Broker
     log_info "Deploying RabbitMQ..."
@@ -150,6 +162,41 @@ setup_port_forwarding() {
     if [ "$DEPLOY_LOGGING" = "true" ]; then
         kubectl port-forward -n logging svc/elasticsearch 9200:9200 &
     fi
+}
+
+setup_storage_provisioner() {
+    log_info "Setting up storage provisioner..."
+    
+    # Apply the storage class configuration
+    if ! kubectl apply -f kind/k8s/storage-class.yaml; then
+        log_error "Failed to apply storage class configuration ${CROSS}"
+        return 1
+    fi
+    log_success "Storage class configured ${TICK}"
+
+    # Apply the local path provisioner
+    if ! kubectl apply -f https://raw.githubusercontent.com/rancher/local-path-provisioner/master/deploy/local-path-storage.yaml; then
+        log_error "Failed to apply local path provisioner ${CROSS}"
+        return 1
+    fi
+    log_success "Local path provisioner applied ${TICK}"
+
+    # Wait for the provisioner to be ready
+    if ! kubectl wait --for=condition=ready pod -l app=local-path-provisioner -n local-path-storage --timeout=60s; then
+        log_error "Storage provisioner setup failed ${CROSS}"
+        # Show provisioner pod status for debugging
+        kubectl describe pods -n local-path-storage -l app=local-path-provisioner
+        return 1
+    fi
+    
+    # Verify storage class is set as default
+    if ! kubectl get storageclass standard -o jsonpath='{.metadata.annotations.storageclass\.kubernetes\.io/is-default-class}' | grep -q "true"; then
+        log_error "Storage class 'standard' is not set as default ${CROSS}"
+        return 1
+    fi
+    
+    log_success "Storage provisioner setup complete ${TICK}"
+    return 0
 }
 
 # 1. Create namespaces
