@@ -18,6 +18,13 @@ log_success() { echo -e "${GREEN}SUCCESS:${NC} $1"; }
 log_warning() { echo -e "${YELLOW}WARNING:${NC} $1"; }
 log_error() { echo -e "${RED}ERROR:${NC} $1"; }
 
+log_info "Applying secrets..."
+if ! kubectl apply -f secrets.yaml -n ecommerce; then
+    log_error "Failed to apply secrets ${CROSS}"
+    exit 1
+fi
+log_success "Secrets applied ${TICK}"
+
 # Environment variables for optional components
 DEPLOY_MONITORING=${DEPLOY_MONITORING:-true}
 DEPLOY_LOGGING=${DEPLOY_LOGGING:-true}
