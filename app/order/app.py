@@ -148,29 +148,44 @@ def metrics():
 def health():
     """Health check endpoint"""
     try:
-        # Test database connection
-        conn = get_db_connection()
-        with conn.cursor() as cursor:
-            cursor.execute('SELECT 1')
-        conn.close()
-        
-        # Test RabbitMQ connection
-        credentials = pika.PlainCredentials(RABBITMQ_USER, RABBITMQ_PASS)
-        connection = pika.BlockingConnection(
-            pika.ConnectionParameters(
-                host=RABBITMQ_HOST,
-                credentials=credentials,
-                connection_attempts=1,
-                socket_timeout=1
-            )
-        )
-        connection.close()
-        
-        return jsonify({
+        # Basic application health
+        health_status = {
             "status": "healthy",
-            "database": "connected",
-            "message_queue": "connected"
-        }), 200
+            "database": "unknown",
+            "message_queue": "unknown"
+        }
+
+        # Test database connection
+        try:
+            conn = get_db_connection()
+            with conn.cursor() as cursor:
+                cursor.execute('SELECT 1')
+            conn.close()
+            health_status["database"] = "connected"
+        except Exception as e:
+            logger.warning(f"Database health check failed: {str(e)}")
+            health_status["database"] = "disconnected"
+
+        # Test RabbitMQ connection
+        try:
+            credentials = pika.PlainCredentials(RABBITMQ_USER, RABBITMQ_PASS)
+            connection = pika.BlockingConnection(
+                pika.ConnectionParameters(
+                    host=RABBITMQ_HOST,
+                    credentials=credentials,
+                    connection_attempts=1,
+                    socket_timeout=1
+                )
+            )
+            connection.close()
+            health_status["message_queue"] = "connected"
+        except Exception as e:
+            logger.warning(f"RabbitMQ health check failed: {str(e)}")
+            health_status["message_queue"] = "disconnected"
+
+        # Return 200 if at least basic app is healthy
+        return jsonify(health_status), 200
+
     except Exception as e:
         logger.error(f"Health check failed: {str(e)}")
         return jsonify({

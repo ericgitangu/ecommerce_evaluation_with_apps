@@ -15,6 +15,8 @@ spec:
       labels:
         app: order-service
     spec:
+      imagePullSecrets:
+        - name: regcred
       tolerations:
         - key: "node-role.kubernetes.io/control-plane"
           operator: "Exists"
@@ -23,6 +25,8 @@ spec:
         - name: order-service
           image: egitangu/order-service:latest
           imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 5003
           readinessProbe:
             httpGet:
               path: /health
@@ -40,12 +44,12 @@ spec:
             timeoutSeconds: 5
             failureThreshold: 3
           resources:
+            limits:
+              memory: "64Mi"
+              cpu: "50m"
             requests:
               memory: "64Mi"
               cpu: "50m"
-            limits:
-              memory: "128Mi"
-              cpu: "250m"
           env:
             - name: RABBITMQ_HOST
               value: "rabbitmq.messaging.svc.cluster.local"

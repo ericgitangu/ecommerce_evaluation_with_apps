@@ -14,7 +14,7 @@ COPY utils /app/utils/
 COPY . /app/
 
 # Expose the port
-EXPOSE 5004 8003
+EXPOSE 5004
 
 # Run the application
-CMD ["python3", "app.py"]
+CMD ["gunicorn", "--config", "gunicorn-config.py", "app:application"]
