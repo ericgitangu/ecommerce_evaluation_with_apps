@@ -1,12 +1,20 @@
 FROM python:3.9-slim
 
+# Set the working directory
 WORKDIR /app
 
+# Copy the requirements file
 COPY requirements.txt /app/
 RUN pip install --no-cache-dir -r requirements.txt
 
+# Copy the application code
 COPY . /app/
 
+# Copy the utils folder
+COPY utils /app/utils/
+
+# Expose the port
 EXPOSE 5001
 
+# Run the application
 CMD ["python3", "app.py"]

@@ -6,6 +6,10 @@ metadata:
   labels:
     app: search-service
 spec:
+  tolerations:
+    - key: "node-role.kubernetes.io/control-plane"
+      operator: "Exists"
+      effect: "NoSchedule"
   replicas: 1
   selector:
     matchLabels:
@@ -18,6 +22,7 @@ spec:
       containers:
         - name: search-service
           image: egitangu/search-service:latest
+          imagePullPolicy: IfNotPresent
           resources:
             limits:
               memory: "128Mi"

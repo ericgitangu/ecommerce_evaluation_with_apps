@@ -6,6 +6,10 @@ metadata:
   labels:
     app: catalog-service
 spec:
+  tolerations:
+    - key: "node-role.kubernetes.io/control-plane"
+      operator: "Exists"
+      effect: "NoSchedule"
   replicas: 1
   selector:
     matchLabels:
@@ -15,6 +19,10 @@ spec:
       labels:
         app: catalog-service
     spec:
+      tolerations:
+        - key: "node-role.kubernetes.io/control-plane"
+          operator: "Exists"
+          effect: "NoSchedule"
       containers:
         - name: catalog-service
           image: egitangu/catalog-service:latest
