@@ -1,5 +1,39 @@
 #!/bin/bash
 
+# Color definitions
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
+NC='\033[0m' # No Color
+TICK="${GREEN}✓${NC}"
+CROSS="${RED}✗${NC}"
+
+# Print with color
+log_info() { echo -e "${BLUE}INFO:${NC} $1"; }
+log_success() { echo -e "${GREEN}SUCCESS:${NC} $1"; }
+log_warning() { echo -e "${YELLOW}WARNING:${NC} $1"; }
+log_error() { echo -e "${RED}ERROR:${NC} $1"; }
+
+check_postgres_connection() {
+    log_info "Verifying PostgreSQL connection..."
+    local retries=0
+    local max_retries=30
+    
+    while [ $retries -lt $max_retries ]; do
+        if kubectl exec -n database deploy/postgres-postgresql-0 -- pg_isready -U postgres; then
+            log_success "PostgreSQL is ready ${TICK}"
+            return 0
+        fi
+        retries=$((retries + 1))
+        log_info "Waiting for PostgreSQL to be ready... (attempt $retries/$max_retries)"
+        sleep 10
+    done
+    
+    log_error "PostgreSQL failed to become ready ${CROSS}"
+    return 1
+}
+
 # Stop Execution on Error
 set -e
 
@@ -72,7 +106,7 @@ helm install rabbitmq bitnami/rabbitmq \
   --timeout 10m
 
 # Deploy PostgreSQL
-echo "Deploying PostgreSQL..."
+log_info "Installing PostgreSQL..."
 helm install postgres bitnami/postgresql \
   --namespace database \
   --set auth.postgresPassword=mysecretpassword \
@@ -86,5 +120,11 @@ helm install postgres bitnami/postgresql \
   --set readReplicas.resources.limits.memory=256Mi \
   --create-namespace \
   --timeout 10m
+
+# Check PostgreSQL connection after installation
+if ! check_postgres_connection; then
+    log_error "PostgreSQL installation verification failed ${CROSS}"
+    exit 1
+fi
 
 echo "All services deployed successfully!"
