@@ -31,8 +31,27 @@ logger.info("Catalog service starting up")
 DATABASE_URL = os.getenv("DATABASE_URL", f"postgresql://{os.getenv('POSTGRES_USER')}:{os.getenv('POSTGRES_PASSWORD')}@{os.getenv('POSTGRES_HOST')}:{os.getenv('POSTGRES_PORT', '5432')}/postgres")
 DB_TIMEOUT = int(os.getenv("DB_TIMEOUT", 5))  # Timeout for health check queries
 
-# SQLAlchemy setup
-engine = create_engine(DATABASE_URL, pool_pre_ping=True)
+# Database configuration with fallbacks
+DB_HOST = os.getenv('POSTGRES_HOST', 'postgres')
+DB_PORT = os.getenv('POSTGRES_PORT', '5432')
+DB_NAME = os.getenv('POSTGRES_DB', 'postgres')
+DB_USER = os.getenv('POSTGRES_USER', 'postgres')
+DB_PASS = os.getenv('POSTGRES_PASSWORD', '')
+
+# SQLAlchemy setup with retry logic
+def get_db_engine():
+    """Create SQLAlchemy engine with retry logic"""
+    url = f"postgresql://{DB_USER}:{DB_PASS}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
+    return create_engine(
+        url,
+        pool_pre_ping=True,
+        pool_size=5,
+        max_overflow=10,
+        pool_timeout=30,
+        pool_recycle=1800
+    )
+
+engine = get_db_engine()
 metadata = MetaData()
 
 # Define the catalog table
@@ -44,14 +63,29 @@ catalog_table = Table(
     Column("stock", Integer, nullable=False)
 )
 
-# Add a connection manager
 @contextmanager
 def get_db_connection():
-    connection = engine.connect()
-    try:
-        yield connection
-    finally:
-        connection.close()
+    """Context manager for database connections with retry logic"""
+    retries = 3
+    delay = 2
+    last_exception = None
+    
+    for attempt in range(retries):
+        try:
+            connection = engine.connect()
+            try:
+                yield connection
+            finally:
+                connection.close()
+            return
+        except Exception as e:
+            last_exception = e
+            logger.warning(f"Database connection attempt {attempt + 1} failed: {str(e)}")
+            if attempt < retries - 1:
+                time.sleep(delay * (attempt + 1))
+    
+    logger.error(f"All database connection attempts failed: {str(last_exception)}")
+    raise last_exception
 
 # Modify initialize_table to return success status
 def initialize_table() -> bool:
@@ -138,22 +172,24 @@ def health():
     """
     logger.debug("Health check requested")
     try:
-        table_exists = verify_table_exists()
         with get_db_connection() as connection:
+            # Simple query to test connection
             connection.execute(text("SELECT 1"))
-        status = "exists" if table_exists else "missing"
-        logger.info(f"Health check successful. Catalog table {status}")
-        return jsonify({
-            "status": "healthy",
-            "database": "connected",
-            "catalog_table": status
-        }), 200
+            
+            # Check if catalog table exists
+            table_exists = engine.dialect.has_table(connection, "catalog")
+            
+            return jsonify({
+                "status": "healthy",
+                "database": "connected",
+                "catalog_table": "exists" if table_exists else "missing"
+            }), 200
     except Exception as e:
-        logger.error(f"Health check failed: {str(e)}", exc_info=True)
+        logger.error(f"Health check failed: {str(e)}")
         return jsonify({
             "status": "unhealthy",
-            "error": str(e),
-            "database": "disconnected"
+            "database": "disconnected",
+            "error": str(e)
         }), 500
 
 @app.route('/metrics')
