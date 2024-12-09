@@ -1,4 +1,16 @@
-# Deployment manifest for Grafana
+# Kubernetes Deployment manifest for Grafana
+# This deployment manages a Grafana instance for metrics visualization and monitoring.
+#
+# Key components:
+# - Uses official Grafana image
+# - Runs in monitoring namespace
+# - Configured with resource limits and requests
+# - Mounts ConfigMaps for dashboards and datasources
+# - Exposes port 3000 for web interface
+#
+# References:
+# - Grafana Docker: https://grafana.com/docs/grafana/latest/setup-grafana/installation/docker/
+# - Kubernetes Deployment API: https://kubernetes.io/docs/reference/kubernetes-api/workload-resources/deployment-v1/
 apiVersion: apps/v1
 kind: Deployment
 metadata:

@@ -1,5 +1,46 @@
 #!/bin/bash
 
+# Script Description:
+# This script automates the deployment of microservices and infrastructure components to a Kubernetes cluster.
+# It handles the complete setup including namespaces, core services, monitoring, and logging.
+#
+# Key Components:
+# - Error handling with set -e to stop on first error
+# - Color-coded logging for better visibility
+# - Environment variables for optional components (monitoring, logging)
+# - Utility functions for deployment status checking
+#
+# Main Functions:
+# - log_info: Blue colored logging for general information
+# - log_success: Green colored logging for successful operations  
+# - log_warning: Yellow colored logging for warnings
+# - log_error: Red colored logging for errors
+# - wait_for_deployment: Utility to wait for deployments with debug info on failure
+#
+# Environment Variables:
+# - DEPLOY_MONITORING: Controls if monitoring stack should be deployed (default: true)
+# - DEPLOY_LOGGING: Controls if logging stack should be deployed (default: true)
+#
+# Color Codes:
+# - RED: Error messages
+# - GREEN: Success messages and checkmarks
+# - YELLOW: Warning messages
+# - BLUE: Info messages
+# - NC: Reset color
+#
+# Success/Failure Indicators:
+# - TICK (✓): Indicates successful operations
+# - CROSS (✗): Indicates failed operations
+#
+# Usage:
+# ./deploy-kubectl.sh
+#
+# The script requires:
+# - kubectl configured with cluster access
+# - Required container images accessible
+# - Sufficient cluster permissions
+
+
 # Stop execution on error
 set -e
 

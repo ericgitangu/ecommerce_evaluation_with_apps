@@ -1,4 +1,16 @@
-# ConfigMap for Prometheus scrape configurations
+# Kubernetes ConfigMap manifest for Prometheus Configuration
+# This ConfigMap provides the core configuration for Prometheus metrics scraping
+# from the microservices.
+#
+# Key components:
+# - ConfigMap in monitoring namespace
+# - Global scrape interval setting
+# - Service discovery configs for Flask microservices
+#
+# References:
+# - Prometheus Configuration: https://prometheus.io/docs/prometheus/latest/configuration/configuration/
+# - Kubernetes ConfigMap: https://kubernetes.io/docs/concepts/configuration/configmap/
+# - Service Discovery: https://prometheus.io/docs/prometheus/latest/configuration/configuration/#scrape_config
 apiVersion: v1
 kind: ConfigMap
 metadata:

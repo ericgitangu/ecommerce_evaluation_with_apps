@@ -1,4 +1,18 @@
-# Deployment manifest for PostgreSQL
+# PostgreSQL StatefulSet Configuration
+# This manifest defines a StatefulSet to run PostgreSQL in Kubernetes
+#
+# References:
+# - Official PostgreSQL Docker image: https://hub.docker.com/_/postgres
+# - Kubernetes StatefulSet docs: https://kubernetes.io/docs/concepts/workloads/controllers/statefulset/
+# - PostgreSQL on Kubernetes best practices: https://cloud.google.com/blog/products/databases/to-run-or-not-to-run-a-database-on-kubernetes-what-to-consider
+#
+# The configuration uses:
+# - PostgreSQL 15 Alpine-based image for smaller footprint
+# - Secret references for sensitive credentials
+# - Resource limits and requests for proper scheduling
+# - Readiness probe to verify database availability
+# - Persistent volume for data storage
+
 apiVersion: apps/v1
 kind: StatefulSet
 metadata:

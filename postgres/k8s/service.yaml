@@ -1,4 +1,17 @@
-# Service manifest for PostgreSQL
+# Kubernetes Service manifest for PostgreSQL
+# This service exposes the PostgreSQL StatefulSet internally within the cluster
+# using a ClusterIP service type (default).
+#
+# Key components:
+# - Exposes PostgreSQL standard port 5432
+# - Selects pods with app=postgres label
+# - Runs in database namespace
+#
+# References:
+# - Kubernetes Service API: https://kubernetes.io/docs/reference/kubernetes-api/service-resources/service-v1/
+# - Service Types: https://kubernetes.io/docs/concepts/services-networking/service/#publishing-services-service-types
+# - PostgreSQL ports: https://www.postgresql.org/docs/current/app-postgres.html
+
 apiVersion: v1
 kind: Service
 metadata:
@@ -6,7 +19,7 @@ metadata:
   namespace: database
 spec:
   ports:
-  - port: 5432
-    targetPort: 5432
+    - port: 5432
+      targetPort: 5432
   selector:
     app: postgres

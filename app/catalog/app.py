@@ -1,9 +1,10 @@
 import os
 import time
-from flask import Flask, jsonify, request
+from app.frontend.app import API_HITS, PROCESSING_TIME
+from flask import Flask, jsonify
 from prometheus_client import Counter, Histogram, generate_latest, CONTENT_TYPE_LATEST
-from sqlalchemy import create_engine, MetaData, Table, Column, Integer, String, Float, text
-from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy import create_engine, text
+
 from contextlib import contextmanager
 import sys
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -57,7 +58,7 @@ def get_db_engine():
     """Create SQLAlchemy engine with retry logic"""
     if not wait_for_db():
         logger.error("Database host resolution failed")
-        # raise Exception("Database host resolution failed")
+        # raise Exception("Database host resolution failed") # TODO: ensure that the database is ready before starting the service
         
     url = f"postgresql://{DB_USER}:{DB_PASS}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
     return create_engine(
@@ -101,7 +102,7 @@ def get_db_connection():
                 time.sleep(delay * (attempt + 1))
     
     logger.error(f"All database connection attempts failed: {str(last_exception)}")
-    # raise last_exception
+    # raise last_exception # TODO: ensure that the database is ready before starting the service
 
 @app.route('/health')
 def health():
@@ -125,9 +126,24 @@ def health():
 
 @app.route('/metrics')
 def metrics():
-    """Metrics endpoint for Prometheus"""
+    """
+    Metrics endpoint for Prometheus
+    """
     logger.info("Metrics endpoint called - catalog service")
     return generate_latest(), 200, {'Content-Type': CONTENT_TYPE_LATEST}
+
+@app.route('/')
+def index():
+    """
+    Index endpoint
+    """
+    logger.info("Index endpoint called - catalog service")
+    start_time = time.time()
+    API_HITS.labels(method='GET', endpoint='/').inc()
+    PROCESSING_TIME.labels(endpoint='/').observe(time.time() - start_time)
+    return jsonify({
+        "message": "Catalog Service Running!"
+    }), 200
 
 def create_app():
     """Application factory function"""
@@ -153,4 +169,8 @@ def create_app():
 application = create_app()
 
 if __name__ == "__main__":
+    # Start Prometheus metrics server
+    # start_http_server(8003) # TODO: we are using metrics server with the service's metrics endpoint!
+    
+    # Start Flask app on port 5001
     application.run(host="0.0.0.0", port=5001)

@@ -1,3 +1,18 @@
+# Kubernetes Service manifest for Nginx Ingress Controller
+# This service exposes the Nginx ingress controller deployment to external traffic
+# using a LoadBalancer service type.
+#
+# Key components:
+# - LoadBalancer service type for external access
+# - Exposes port 80 for HTTP traffic
+# - Selects pods with app=nginx-ingress label
+# - Runs in ecommerce namespace
+#
+# References:
+# - Kubernetes Service API: https://kubernetes.io/docs/reference/kubernetes-api/service-resources/service-v1/
+# - Service Types: https://kubernetes.io/docs/concepts/services-networking/service/#loadbalancer
+# - Nginx Ingress Controller: https://docs.nginx.com/nginx-ingress-controller/installation/installation-with-manifests/
+
 apiVersion: v1
 kind: Service
 metadata:

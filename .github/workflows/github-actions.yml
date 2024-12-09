@@ -1,4 +1,39 @@
-name: CI/CD Pipeline
+# GitHub Actions Workflow for CI/CD Pipeline
+# This workflow automates testing, building, and deployment of microservices
+#
+# Triggers:
+# - Push events to main branch
+#
+# Key Components:
+# 1. install-deps-and-test job:
+#    - Installs required tools (Kind, Istioctl, Kubectl)
+#    - Runs integration tests in Kind cluster
+#
+# 2. build-scan-and-publish job:
+#    - Runs after successful testing
+#    - Builds and publishes container images
+#
+# Environment:
+# - Runs on latest Ubuntu runner
+# - Uses actions/checkout@v3 for code access
+#
+# Tools Installed:
+# - Kind: Local Kubernetes cluster
+# - Istioctl: Service mesh management
+# - Kubectl: Kubernetes CLI
+#
+# Testing:
+# - Executes test-local.sh script
+# - Verifies cluster setup and service health
+#
+# References:
+# - GitHub Actions: https://docs.github.com/en/actions
+# - Kind: https://kind.sigs.k8s.io/
+# - Istio: https://istio.io/
+# - Kubectl: https://kubernetes.io/docs/reference/kubectl/
+
+
+name: Ecommerce Project CI/CD Pipeline
 
 on:
   push:

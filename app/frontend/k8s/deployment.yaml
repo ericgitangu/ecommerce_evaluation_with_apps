@@ -1,3 +1,19 @@
+# Kubernetes Deployment manifest for the Frontend Service
+# This deployment manages the frontend service which provides the main user interface
+# and handles communication with other microservices.
+#
+# Key components:
+# - Uses egitangu/frontend-service:latest image
+# - Runs in ecommerce namespace
+# - Configured with resource limits and requests
+# - Includes readiness/liveness probes for health monitoring
+# - Connects to RabbitMQ for message processing
+#
+# References:
+# - Kubernetes Deployment API: https://kubernetes.io/docs/reference/kubernetes-api/workload-resources/deployment-v1/
+# - Kubernetes Probes: https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/
+# - Resource Management: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
+
 apiVersion: apps/v1
 kind: Deployment
 metadata:

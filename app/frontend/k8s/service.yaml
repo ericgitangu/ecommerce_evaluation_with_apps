@@ -1,3 +1,17 @@
+# Kubernetes Service manifest for the Frontend Service
+# This service exposes the frontend service deployment within the cluster
+# to enable user interface access.
+#
+# Key components:
+# - ClusterIP service type (default) for internal cluster access
+# - Exposes port 5004 for the frontend service
+# - Selects pods with app=frontend-service label
+# - Runs in ecommerce namespace
+#
+# References:
+# - Kubernetes Service API: https://kubernetes.io/docs/reference/kubernetes-api/service-resources/service-v1/
+# - Service Types: https://kubernetes.io/docs/concepts/services-networking/service/#publishing-services-service-types
+
 apiVersion: v1
 kind: Service
 metadata:

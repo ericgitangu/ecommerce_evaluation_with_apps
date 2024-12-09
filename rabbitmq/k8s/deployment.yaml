@@ -1,4 +1,16 @@
-# Deployment manifest for RabbitMQ
+# Kubernetes Deployment manifest for RabbitMQ
+# This deployment manages a RabbitMQ message broker instance for asynchronous communication.
+#
+# Key components:
+# - Uses official RabbitMQ image with management plugin
+# - Runs in messaging namespace
+# - Exposes AMQP (5672) and management (15672) ports
+# - Configured with resource limits and health checks
+#
+# References:
+# - RabbitMQ Docker: https://hub.docker.com/_/rabbitmq
+# - Kubernetes Deployment API: https://kubernetes.io/docs/reference/kubernetes-api/workload-resources/deployment-v1/
+# - RabbitMQ Monitoring: https://www.rabbitmq.com/monitoring.html
 apiVersion: apps/v1
 kind: Deployment
 metadata:

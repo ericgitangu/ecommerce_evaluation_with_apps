@@ -1,5 +1,49 @@
 #!/bin/bash
 
+# Script Description:
+# This script automates testing of a local Kubernetes development environment.
+# It performs health checks and verifies the setup of various services.
+#
+# Key Components:
+# - Color-coded logging for better visibility of test results
+# - Cleanup function to remove resources when done
+# - Health checks for core services:
+#   * PostgreSQL database
+#   * RabbitMQ message broker 
+#   * Elasticsearch logging
+#   * Prometheus monitoring
+#   * Grafana dashboards
+#   * Istio service mesh
+#
+# Color Codes Used:
+# - RED: Error messages and failures
+# - GREEN: Success messages and passing tests
+# - YELLOW: Warning messages
+# - BLUE: Info messages
+# - TICK (✓): Indicates passing tests
+# - CROSS (✗): Indicates failing tests
+#
+# Main Functions:
+# - log_info: Blue colored logging for general information
+# - log_success: Green colored logging for passing tests
+# - log_warning: Yellow colored logging for warnings
+# - log_error: Red colored logging for failing tests
+# - cleanup: Removes cluster resources when script exits
+#
+# Error Handling:
+# - Uses set -e to stop on first error
+# - Cleanup function registered as trap for graceful shutdown
+#
+# Usage:
+# ./test-local.sh
+#
+# Prerequisites:
+# - kubectl configured with cluster access
+# - kind cluster running
+# - helm installed
+# - Required services deployed
+
+
 # Color definitions
 RED='\033[0;31m'
 GREEN='\033[0;32m'

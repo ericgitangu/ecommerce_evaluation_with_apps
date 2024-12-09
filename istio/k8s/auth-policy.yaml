@@ -1,3 +1,16 @@
+# Istio Authorization Policy and Peer Authentication manifests
+# These policies enforce secure communication and access control within the ecommerce namespace.
+#
+# Key components:
+# - AuthorizationPolicy restricts frontend-service access to specific paths
+# - PeerAuthentication enforces strict mTLS between services
+# - Policies apply to ecommerce namespace
+#
+# References:
+# - Istio Authorization Policy: https://istio.io/latest/docs/reference/config/security/authorization-policy/
+# - Istio Peer Authentication: https://istio.io/latest/docs/reference/config/security/peer_authentication/
+# - Istio Security: https://istio.io/latest/docs/concepts/security/
+
 apiVersion: security.istio.io/v1beta1
 kind: AuthorizationPolicy
 metadata:
@@ -8,13 +21,13 @@ spec:
     matchLabels:
       app: frontend-service
   rules:
-  - from:
-    - source:
-        principals: ["cluster.local/ns/ecommerce/sa/frontend-service"]
-    to:
-    - operation:
-        methods: ["GET"]
-        paths: ["/", "/health"]
+    - from:
+        - source:
+            principals: ["cluster.local/ns/ecommerce/sa/frontend-service"]
+      to:
+        - operation:
+            methods: ["GET"]
+            paths: ["/", "/health"]
 ---
 apiVersion: security.istio.io/v1beta1
 kind: PeerAuthentication

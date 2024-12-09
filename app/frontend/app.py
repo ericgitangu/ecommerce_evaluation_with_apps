@@ -6,10 +6,11 @@ import time
 import os
 import sys
 
-
+# Add the parent directory to the Python path
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from utils.logger import setup_logger
 
+# Initialize Flask app
 app = Flask(__name__)
 
 # Metrics
@@ -24,6 +25,9 @@ QUEUE_NAME = "orders"
 logger = setup_logger('frontend')
 
 def poll_rabbitmq():
+    """
+    Poll RabbitMQ for new orders
+    """
     try:
         connection = pika.BlockingConnection(pika.ConnectionParameters(host=RABBITMQ_HOST))
         channel = connection.channel()
@@ -36,25 +40,38 @@ def poll_rabbitmq():
 
 @app.route("/")
 def home():
+    """
+    Home route for the frontend service
+    """
     start_time = time.time()
     API_HITS.labels(method='GET', endpoint='/').inc()
     PROCESSING_TIME.labels(endpoint='/').observe(time.time() - start_time)
     logger.info("Frontend Service Running!")
-    return jsonify({"message": "Frontend Service Running!"}), 200
+    return jsonify({
+        "message": "Frontend Service Running!"
+    }), 200
 
 @app.route("/metrics")
 def metrics():
+    """
+    Metrics endpoint for the frontend service
+    """
     from prometheus_client import generate_latest
     logger.info("Metrics request received for frontend service")
     return generate_latest()
 
 @app.route("/health")
 def health():
+    """
+    Health check endpoint for the frontend service
+    """
     logger.info("Health check request received for frontend service")
     return jsonify({"status": "healthy"}), 200
 
 def create_app():
-    """Application factory function"""
+    """
+    Application factory function
+    """
     logger.info("Creating app for Gunicorn: %s", 'frontend-service')
     return app
 
@@ -70,5 +87,5 @@ if __name__ == "__main__":
     rabbitmq_thread = threading.Thread(target=poll_rabbitmq, daemon=True)
     rabbitmq_thread.start()
     
-    # Start Flask app
+    # Start Flask app on port 5004
     application.run(host="0.0.0.0", port=5004)

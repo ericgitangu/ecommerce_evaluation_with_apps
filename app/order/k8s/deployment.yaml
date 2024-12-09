@@ -1,3 +1,19 @@
+# Kubernetes Deployment manifest for the Order Service
+# This deployment manages the order service which handles customer order processing
+# and management.
+#
+# Key components:
+# - Uses egitangu/order-service:latest image
+# - Runs in ecommerce namespace
+# - Configured with resource limits and requests
+# - Includes readiness/liveness probes for health monitoring
+# - Uses imagePullSecrets for private registry access
+#
+# References:
+# - Kubernetes Deployment API: https://kubernetes.io/docs/reference/kubernetes-api/workload-resources/deployment-v1/
+# - Kubernetes Probes: https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/
+# - Resource Management: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
+
 apiVersion: apps/v1
 kind: Deployment
 metadata:

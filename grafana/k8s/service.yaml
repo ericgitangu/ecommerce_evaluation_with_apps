@@ -1,4 +1,16 @@
-# Service manifest for Grafana
+# Kubernetes Service manifest for Grafana
+# This service exposes the Grafana deployment within the cluster
+# to enable metrics visualization and monitoring.
+#
+# Key components:
+# - ClusterIP service type for internal cluster access
+# - Exposes port 3000 for Grafana web interface
+# - Selects pods with app=grafana label
+# - Runs in monitoring namespace
+#
+# References:
+# - Kubernetes Service API: https://kubernetes.io/docs/reference/kubernetes-api/service-resources/service-v1/
+# - Grafana docs: https://grafana.com/docs/grafana/latest/setup-grafana/installation/docker/
 apiVersion: v1
 kind: Service
 metadata:
@@ -6,7 +18,7 @@ metadata:
   namespace: monitoring
 spec:
   ports:
-  - port: 3000
-    targetPort: 3000
+    - port: 3000
+      targetPort: 3000
   selector:
     app: grafana

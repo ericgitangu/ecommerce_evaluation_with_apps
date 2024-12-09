@@ -1,3 +1,20 @@
+# Istio DestinationRule manifest for default mesh configuration
+# This configuration sets default traffic policies for all services in the mesh.
+#
+# Key components:
+# - Applies to all .local services in istio-system namespace
+# - TCP connection pool settings:
+#   * Max 100 connections per endpoint
+#   * TCP keepalive enabled for connection reuse
+# - Circuit breaker configuration:
+#   * Ejects endpoints after 5 consecutive 5xx errors
+#   * 30s check interval and ejection duration
+#
+# References:
+# - Istio DestinationRule: https://istio.io/latest/docs/reference/config/networking/destination-rule/
+# - Traffic Management: https://istio.io/latest/docs/concepts/traffic-management/
+# - Circuit Breaking: https://istio.io/latest/docs/tasks/traffic-management/circuit-breaking/
+
 apiVersion: networking.istio.io/v1alpha3
 kind: DestinationRule
 metadata:

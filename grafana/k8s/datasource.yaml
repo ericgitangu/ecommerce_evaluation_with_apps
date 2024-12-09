@@ -1,3 +1,18 @@
+# Kubernetes ConfigMap manifest for Grafana Datasources
+# This ConfigMap configures Prometheus as a datasource in Grafana,
+# enabling metrics visualization and monitoring.
+#
+# Key components:
+# - ConfigMap in monitoring namespace
+# - Configures Prometheus datasource
+# - Uses cluster-internal service URL
+# - Sets as default datasource
+#
+# References:
+# - Grafana Provisioning: https://grafana.com/docs/grafana/latest/administration/provisioning/
+# - Kubernetes ConfigMap: https://kubernetes.io/docs/concepts/configuration/configmap/
+# - Prometheus Data Source: https://grafana.com/docs/grafana/latest/datasources/prometheus/
+
 apiVersion: v1
 kind: ConfigMap
 metadata:

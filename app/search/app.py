@@ -46,7 +46,9 @@ SEARCH_ERRORS = Counter(
 )
 
 def initialize_index():
-    """Initialize Elasticsearch index with sample data"""
+    """
+    Initialize Elasticsearch index with sample data
+    """
     try:
         # Check if the index already exists
         if not es.indices.exists(index=INDEX_NAME):
@@ -93,7 +95,9 @@ def initialize_index():
 
 @app.route('/search', methods=['GET'])
 def search():
-    """Search endpoint"""
+    """
+    Search endpoint: search for products with Elasticsearch
+    """
     start_time = time.time()
     query = request.args.get('q', '')
     
@@ -128,13 +132,17 @@ def search():
 
 @app.route('/metrics')
 def metrics():
-    """Metrics endpoint for Prometheus"""
+    """
+    Metrics endpoint for Prometheus
+    """
     logger.info("Metrics endpoint called - search service")
     return generate_latest(), 200, {'Content-Type': CONTENT_TYPE_LATEST}
 
 @app.route('/health')
 def health():
-    """Health check endpoint"""
+    """
+    Health check endpoint
+    """
     logger.info("Health check endpoint called - search service")
     try:
         # Check Elasticsearch connection
@@ -169,7 +177,9 @@ def health():
         }), 200 # TODO: change to 500 to ensure our health check is working
 
 def create_app():
-    """Application factory function"""
+    """
+    Application factory function
+    """
     logger.info("Creating app for Gunicorn: %s", 'search-service')
     return app
 

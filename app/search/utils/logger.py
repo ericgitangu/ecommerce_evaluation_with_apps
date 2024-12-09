@@ -2,6 +2,7 @@ import logging
 import os
 from logging.handlers import RotatingFileHandler
 
+# Get the parent directory of the current file
 parent_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 def setup_logger(service_name):

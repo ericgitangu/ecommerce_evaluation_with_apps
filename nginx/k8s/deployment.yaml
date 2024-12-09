@@ -1,3 +1,19 @@
+# Kubernetes Deployment and ConfigMap for Nginx Ingress Controller
+# This configuration sets up an Nginx reverse proxy to route traffic to microservices
+#
+# References:
+# - Nginx Kubernetes Ingress Controller docs: https://docs.nginx.com/nginx-ingress-controller/
+# - Kubernetes Deployment API: https://kubernetes.io/docs/concepts/workloads/controllers/deployment/
+# - ConfigMap usage: https://kubernetes.io/docs/concepts/configuration/configmap/
+#
+# The deployment creates a single replica of the Nginx container with:
+# - Resource limits and requests for controlled scaling
+# - ConfigMap volume mount for dynamic configuration
+# - Container port 80 exposed for HTTP traffic
+#
+# The ConfigMap contains the Nginx configuration with upstream definitions
+# for routing to the frontend, catalog and search microservices
+
 apiVersion: apps/v1
 kind: Deployment
 metadata:

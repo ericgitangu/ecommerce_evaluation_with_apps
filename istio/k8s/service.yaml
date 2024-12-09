@@ -1,3 +1,21 @@
+# Istio Gateway and VirtualService configuration for the E-commerce Application
+# This configuration sets up the ingress gateway and routing rules for the microservices.
+#
+# Key components:
+# - Gateway configuration:
+#   * Uses Istio ingress gateway
+#   * Exposes HTTP port 80
+#   * Handles traffic for ecommerce.local domain
+# - VirtualService configuration:
+#   * Routes traffic based on URI prefixes to different microservices
+#   * Manages traffic for catalog, search and order services
+#   * Uses FQDN format for service routing
+#
+# References:
+# - Istio Gateway: https://istio.io/latest/docs/reference/config/networking/gateway/
+# - Istio VirtualService: https://istio.io/latest/docs/reference/config/networking/virtual-service/
+# - Traffic Management: https://istio.io/latest/docs/concepts/traffic-management/
+
 apiVersion: networking.istio.io/v1alpha3
 kind: Gateway
 metadata:

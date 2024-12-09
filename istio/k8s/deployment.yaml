@@ -1,3 +1,18 @@
+# Kubernetes IstioOperator manifest for Istio Service Mesh
+# This manifest configures the core Istio installation and components.
+#
+# Key components:
+# - Uses demo profile for development environments
+# - Enables automatic mTLS between services
+# - Configures DNS capture and protocol detection
+# - Sets resource limits and security contexts
+# - Enables ingress gateway
+#
+# References:
+# - Istio Installation: https://istio.io/latest/docs/setup/install/istioctl/
+# - IstioOperator API: https://istio.io/latest/docs/reference/config/istio.operator.v1alpha1/
+# - Security Best Practices: https://istio.io/latest/docs/ops/best-practices/security/
+
 apiVersion: install.istio.io/v1alpha1
 kind: IstioOperator
 metadata:

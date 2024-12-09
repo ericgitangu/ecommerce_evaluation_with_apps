@@ -1,3 +1,17 @@
+# Kubernetes Service manifest for the Order Service
+# This service exposes the order service deployment within the cluster
+# to enable order processing functionality.
+#
+# Key components:
+# - ClusterIP service type (default) for internal cluster access
+# - Exposes port 5003 for the order service
+# - Selects pods with app=order-service label
+# - Runs in ecommerce namespace
+#
+# References:
+# - Kubernetes Service API: https://kubernetes.io/docs/reference/kubernetes-api/service-resources/service-v1/
+# - Service Types: https://kubernetes.io/docs/concepts/services-networking/service/#publishing-services-service-types
+
 apiVersion: v1
 kind: Service
 metadata:

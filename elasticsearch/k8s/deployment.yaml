@@ -1,4 +1,18 @@
-# Deployment manifest for Elasticsearch
+# Kubernetes Deployment manifest for Elasticsearch
+# This deployment manages a single-node Elasticsearch instance for log aggregation
+# and search functionality.
+#
+# Key components:
+# - Uses official Elasticsearch 8.5.0 image
+# - Runs in logging namespace
+# - Configured with resource limits and requests
+# - Single-node discovery for development use
+# - Disabled security features for simplicity
+# - Exposes port 9200 for REST API
+#
+# References:
+# - Elasticsearch docs: https://www.elastic.co/guide/en/elasticsearch/reference/8.5/docker.html
+# - Kubernetes Deployment API: https://kubernetes.io/docs/reference/kubernetes-api/workload-resources/deployment-v1/
 apiVersion: apps/v1
 kind: Deployment
 metadata:

@@ -1,4 +1,16 @@
-# Service manifest for Elasticsearch
+# Kubernetes Service manifest for Elasticsearch
+# This service exposes the Elasticsearch deployment within the cluster
+# to enable log aggregation and search functionality.
+#
+# Key components:
+# - ClusterIP service type for internal cluster access
+# - Exposes port 9200 for Elasticsearch REST API
+# - Selects pods with app=elasticsearch label
+# - Runs in logging namespace
+#
+# References:
+# - Kubernetes Service API: https://kubernetes.io/docs/reference/kubernetes-api/service-resources/service-v1/
+# - Elasticsearch docs: https://www.elastic.co/guide/en/elasticsearch/reference/8.5/docker.html
 apiVersion: v1
 kind: Service
 metadata:
@@ -6,7 +18,7 @@ metadata:
   namespace: logging
 spec:
   ports:
-  - port: 9200
-    targetPort: 9200
+    - port: 9200
+      targetPort: 9200
   selector:
     app: elasticsearch

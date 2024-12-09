@@ -1,3 +1,17 @@
+# Kubernetes Service manifest for the Search Service
+# This service exposes the search service deployment within the cluster
+# to enable product search functionality.
+#
+# Key components:
+# - ClusterIP service type for internal cluster access
+# - Exposes port 5002 for the search service
+# - Selects pods with app=search-service label
+# - Runs in ecommerce namespace
+#
+# References:
+# - Kubernetes Service API: https://kubernetes.io/docs/reference/kubernetes-api/service-resources/service-v1/
+# - Service Types: https://kubernetes.io/docs/concepts/services-networking/service/#publishing-services-service-types
+
 apiVersion: v1
 kind: Service
 metadata:

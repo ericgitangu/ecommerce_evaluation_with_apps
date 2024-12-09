@@ -1,3 +1,19 @@
+# Prometheus Configuration for Microservices Monitoring
+# This configuration sets up Prometheus to scrape metrics from the microservices
+# and infrastructure components.
+#
+# Key components:
+# - Global settings:
+#   * 15s scrape and evaluation intervals
+# - Scrape configs:
+#   * Flask microservices metrics endpoints
+#   * RabbitMQ metrics
+#
+# References:
+# - Prometheus Configuration: https://prometheus.io/docs/prometheus/latest/configuration/configuration/
+# - Prometheus Best Practices: https://prometheus.io/docs/practices/naming/
+# - Flask Prometheus Metrics: https://github.com/prometheus/client_python
+
 global:
   scrape_interval: 15s
   evaluation_interval: 15s

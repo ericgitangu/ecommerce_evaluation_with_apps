@@ -1,4 +1,18 @@
-# Service manifest for RabbitMQ
+# Kubernetes Service manifest for RabbitMQ
+# This service exposes the RabbitMQ deployment within the cluster
+# to enable message broker functionality.
+#
+# Key components:
+# - ClusterIP service type (default) for internal cluster access
+# - Exposes ports:
+#   * 5672 for AMQP protocol
+#   * 15672 for management interface
+# - Selects pods with app=rabbitmq label
+# - Runs in messaging namespace
+#
+# References:
+# - Kubernetes Service API: https://kubernetes.io/docs/reference/kubernetes-api/service-resources/service-v1/
+# - RabbitMQ Ports: https://www.rabbitmq.com/networking.html#ports
 apiVersion: v1
 kind: Service
 metadata:
@@ -6,11 +20,11 @@ metadata:
   namespace: messaging
 spec:
   ports:
-  - port: 5672
-    targetPort: 5672
-    name: amqp
-  - port: 15672
-    targetPort: 15672
-    name: management
+    - port: 5672
+      targetPort: 5672
+      name: amqp
+    - port: 15672
+      targetPort: 15672
+      name: management
   selector:
     app: rabbitmq

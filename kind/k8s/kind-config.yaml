@@ -1,3 +1,17 @@
+# Kind cluster configuration for local Kubernetes development
+# This manifest defines a 2-node cluster with one control plane and one worker node.
+#
+# Key components:
+# - Uses Kind v1alpha4 API
+# - Specifies Kubernetes v1.28.0 node images
+# - Single control plane node
+# - Single worker node for workload distribution
+#
+# References:
+# - Kind Configuration: https://kind.sigs.k8s.io/docs/user/configuration/
+# - Node Images: https://kind.sigs.k8s.io/docs/user/quick-start/#installation
+# - Multi-node Clusters: https://kind.sigs.k8s.io/docs/user/configuration/#nodes
+
 kind: Cluster
 apiVersion: kind.x-k8s.io/v1alpha4
 nodes:

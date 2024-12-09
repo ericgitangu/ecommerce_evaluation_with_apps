@@ -1,4 +1,17 @@
-# Deployment manifest for Prometheus
+# Kubernetes Deployment manifest for Prometheus
+# This deployment manages a Prometheus instance for metrics collection and monitoring.
+#
+# Key components:
+# - Uses official Prometheus image
+# - Runs in monitoring namespace
+# - Configured with resource limits and requests
+# - Mounts ConfigMap for Prometheus configuration
+# - Exposes port 9090 for metrics scraping
+#
+# References:
+# - Prometheus Docker: https://prometheus.io/docs/prometheus/latest/installation/
+# - Kubernetes Deployment API: https://kubernetes.io/docs/reference/kubernetes-api/workload-resources/deployment-v1/
+# - Prometheus Configuration: https://prometheus.io/docs/prometheus/latest/configuration/configuration/
 apiVersion: apps/v1
 kind: Deployment
 metadata:

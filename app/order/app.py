@@ -141,13 +141,18 @@ def create_order():
 
 @app.route('/metrics')
 def metrics():
-    """Metrics endpoint for Prometheus"""
+    """
+    Metrics endpoint for Prometheus
+    """
     logger.info("Metrics endpoint called - order service")
+    # Prometheus metrics collection
     return generate_latest(), 200, {'Content-Type': CONTENT_TYPE_LATEST}
 
 @app.route('/health')
 def health():
-    """Health check endpoint"""
+    """
+    Health check endpoint
+    """
     logger.info("Health check endpoint called - order service")
     try:
         # Basic application health
@@ -196,7 +201,9 @@ def health():
         }), 500
 
 def create_app():
-    """Application factory function"""
+    """
+    Application factory function
+    """
     logger.info("Creating app for Gunicorn: %s", 'order-service')
     return app
 
@@ -210,5 +217,5 @@ if __name__ == "__main__":
     # Start metrics server - TODO: we are using metrics server with the service's metrics endpoint!
     # start_http_server(8003)
     
-    # Start Flask app
+    # Start Flask app on port 5003
     application.run(host="0.0.0.0", port=5003)

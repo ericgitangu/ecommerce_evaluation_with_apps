@@ -1,5 +1,39 @@
 #!/bin/bash
 
+# Color codes for terminal output
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+BLUE='\033[0;34m'
+NC='\033[0m' # No Color
+
+# Script Description:
+# This script automates the deployment of infrastructure components using Helm charts.
+# It performs the following key tasks:
+# 1. Cleans up any existing installations and PVCs
+# 2. Creates required namespaces
+# 3. Adds and updates Helm repositories 
+# 4. Installs core infrastructure components:
+#    - Prometheus Operator for monitoring
+#    - Elasticsearch for logging
+#    - RabbitMQ for messaging
+#    - PostgreSQL for database
+#    - Grafana for visualization
+#    - Istio for service mesh
+#
+# The script uses color-coded logging for better visibility:
+# - Blue for general info messages
+# - Green for success messages
+# - Red (unused but defined) for potential error messages
+#
+# Prerequisites:
+# - Kubernetes cluster running
+# - Helm installed
+# - kubectl configured with cluster access
+# - Required Helm repositories accessible
+#
+# Usage: ./deploy-helm.sh
+
+
 # Print with color
 log_info() { echo -e "${BLUE}INFO:${NC} $1"; }
 log_success() { echo -e "${GREEN}SUCCESS:${NC} $1"; }

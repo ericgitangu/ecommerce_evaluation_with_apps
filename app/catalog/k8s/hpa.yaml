@@ -1,3 +1,17 @@
+# Kubernetes HorizontalPodAutoscaler manifest for the Catalog Service
+# This HPA automatically scales the catalog service based on CPU and memory utilization.
+#
+# Key components:
+# - Targets catalog-service deployment in ecommerce namespace
+# - Scales between 1-5 replicas
+# - Triggers scaling at:
+#   * 50% CPU utilization
+#   * 70% memory utilization
+#
+# References:
+# - HPA v2 API: https://kubernetes.io/docs/reference/kubernetes-api/workload-resources/horizontal-pod-autoscaler-v2/
+# - HPA Walkthrough: https://kubernetes.io/docs/tasks/run-application/horizontal-pod-autoscale-walkthrough/
+
 apiVersion: autoscaling/v2
 kind: HorizontalPodAutoscaler
 metadata:

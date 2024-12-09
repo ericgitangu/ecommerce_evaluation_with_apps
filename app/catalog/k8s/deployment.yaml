@@ -1,3 +1,10 @@
+# Kubernetes Deployment manifest for the Catalog Service
+# This deployment runs the catalog-service container in the ecommerce namespace
+# References:
+# - Kubernetes Deployment API: https://kubernetes.io/docs/concepts/workloads/controllers/deployment/
+# - Resource Limits: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
+# - Secrets: https://kubernetes.io/docs/concepts/configuration/secret/
+
 apiVersion: apps/v1
 kind: Deployment
 metadata:

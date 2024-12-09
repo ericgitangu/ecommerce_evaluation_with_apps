@@ -1,3 +1,19 @@
+# Kubernetes Deployment manifest for the Search Service
+# This deployment manages the search service which provides product search functionality
+# using Elasticsearch as the search engine.
+#
+# Key components:
+# - Uses egitangu/search-service:latest image
+# - Runs in ecommerce namespace
+# - Configured with resource limits and requests
+# - Connects to Elasticsearch, PostgreSQL and RabbitMQ services
+# - Includes readiness/liveness probes for health monitoring
+# - Mounts volume for logs and metrics
+#
+# References:
+# - Kubernetes Deployment API: https://kubernetes.io/docs/reference/kubernetes-api/workload-resources/deployment-v1/
+# - Kubernetes Probes: https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/
+
 apiVersion: apps/v1
 kind: Deployment
 metadata:
