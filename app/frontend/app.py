@@ -55,7 +55,7 @@ def health():
 
 if __name__ == "__main__":
     # Start Prometheus metrics server
-    start_http_server(8003)
+    # start_http_server(8003) # TODO: aren't we already using prometheus scraping?
     
     # Start RabbitMQ polling in a separate thread
     import threading
