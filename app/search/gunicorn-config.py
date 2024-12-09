@@ -16,7 +16,3 @@ loglevel = "info"
 # Prevent timeouts during startup
 timeout = 300
 graceful_timeout = 300
-
-# Health check settings
-health_check_interval = 30
-health_check_timeout = 10
