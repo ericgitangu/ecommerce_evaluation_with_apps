@@ -13,6 +13,8 @@ spec:
       labels:
         app: frontend-service
     spec:
+      imagePullSecrets:
+        - name: regcred
       containers:
         - name: frontend-service
           image: egitangu/frontend-service:latest
@@ -44,6 +46,28 @@ spec:
           env:
             - name: RABBITMQ_HOST
               value: rabbitmq.messaging.svc.cluster.local
+            - name: POSTGRES_HOST
+              value: postgres-postgresql.database.svc.cluster.local
+            - name: POSTGRES_PORT
+              value: "5432"
+            - name: POSTGRES_DB
+              valueFrom:
+                secretKeyRef:
+                  name: service-secrets
+                  key: postgres-database
+            - name: POSTGRES_USER
+              valueFrom:
+                secretKeyRef:
+                  name: service-secrets
+                  key: postgres-username
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: service-secrets
+                  key: postgres-password
+          volumeMounts:
+            - name: logs-and-metrics
+              mountPath: /app/logs
       volumes:
         - name: logs-and-metrics
           emptyDir: {}

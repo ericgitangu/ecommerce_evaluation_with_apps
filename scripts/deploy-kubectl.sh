@@ -52,7 +52,26 @@ deploy_application_services() {
         log_info "Waiting for $service service..."
         if ! kubectl rollout status deployment/${service}-service -n ecommerce --timeout=180s; then
             log_error "${service} service deployment failed ${CROSS}"
-            kubectl describe deployment/${service}-service -n ecommerce
+            
+            # Debug information
+            log_info "=== Pod Status ==="
+            kubectl get pods -n ecommerce -l app=${service}-service
+            
+            log_info "=== Pod Logs ==="
+            kubectl logs -n ecommerce -l app=${service}-service --tail=50
+            
+            log_info "=== Pod Description ==="
+            kubectl describe pods -n ecommerce -l app=${service}-service
+            
+            log_info "=== Deployment Status ==="
+            kubectl describe deployment ${service}-service -n ecommerce
+            
+            log_info "=== Events ==="
+            kubectl get events -n ecommerce --sort-by=.lastTimestamp | grep ${service}
+            
+            log_info "=== Image Pull Status ==="
+            kubectl get pods -n ecommerce -l app=${service}-service -o jsonpath='{.items[*].status.containerStatuses[*].imageRef}'
+            
             return 1
         fi
         log_success "${service} service deployed successfully ${TICK}"
@@ -211,3 +230,29 @@ if [ "$DEPLOY_LOGGING" = "true" ]; then
 fi
 
 log_success "Deployment complete! ${TICK}"
+
+check_pod_status() {
+    local service=$1
+    log_info "Checking pod status for ${service}..."
+    
+    # Check pod status
+    local pod_status=$(kubectl get pods -n ecommerce -l app=${service}-service -o jsonpath='{.items[0].status.phase}')
+    local container_status=$(kubectl get pods -n ecommerce -l app=${service}-service -o jsonpath='{.items[0].status.containerStatuses[0].ready}')
+    
+    if [[ "$pod_status" != "Running" ]]; then
+        log_error "Pod is not running. Current status: $pod_status ${CROSS}"
+        # Check for events related to this pod
+        kubectl get events -n ecommerce --field-selector involvedObject.kind=Pod,involvedObject.name=$(kubectl get pods -n ecommerce -l app=${service}-service -o jsonpath='{.items[0].metadata.name}') --sort-by='.lastTimestamp'
+        return 1
+    fi
+    
+    if [[ "$container_status" != "true" ]]; then
+        log_error "Container is not ready ${CROSS}"
+        # Get container logs
+        kubectl logs -n ecommerce -l app=${service}-service --tail=50
+        return 1
+    fi
+    
+    log_success "Pod for ${service} is running and ready ${TICK}"
+    return 0
+}
