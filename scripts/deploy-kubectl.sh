@@ -265,8 +265,10 @@ deploy_application_services
 deploy_monitoring
 deploy_logging
 
+sleep 60 # wait for all pods to come up
+
 log_info "Waiting for all pods to come up before port forwarding..."
-if ! kubectl wait --for=condition=ready pod --all --timeout=300s; then
+if ! kubectl wait --for=condition=ready pod --all --timeout=600s; then
     log_error "Not all pods are ready, proceeding with port forwarding anyway ${CROSS}"
 else
     log_success "All pods are ready, proceeding with port forwarding ${TICK}"
