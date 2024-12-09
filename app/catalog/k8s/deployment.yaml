@@ -18,6 +18,7 @@ spec:
       containers:
         - name: catalog-service
           image: egitangu/catalog-service:latest
+          imagePullPolicy: IfNotPresent
           resources:
             limits:
               memory: "128Mi"

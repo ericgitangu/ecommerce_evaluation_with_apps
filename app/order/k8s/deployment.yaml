@@ -16,6 +16,7 @@ spec:
       containers:
         - name: order-service
           image: egitangu/order-service:latest
+          imagePullPolicy: IfNotPresent
           readinessProbe:
             httpGet:
               path: /health
