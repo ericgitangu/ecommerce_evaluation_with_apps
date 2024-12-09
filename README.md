@@ -1,4 +1,4 @@
-# E-commerce Microservices Project
+# E-commerce Microservices Project - Evaluation
 
 [![CI/CD Pipeline](https://github.com/ericgitangu/microservices/actions/workflows/github-actions.yml/badge.svg)](https://github.com/ericgitangu/microservices/actions/workflows/github-actions.yml) [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
