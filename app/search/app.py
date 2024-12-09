@@ -166,7 +166,7 @@ if __name__ == "__main__":
     # Initialize Elasticsearch index
     initialize_index()
     
-    # Start metrics server - TODO: aren't we already using prometheus scraping?
+    # Start metrics server - TODO: we are using metrics server with the service's metrics endpoint!
     # start_http_server(8003)
     
     # Start Flask app

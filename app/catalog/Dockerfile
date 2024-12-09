@@ -19,7 +19,7 @@ COPY . .
 RUN mkdir -p /app/logs && \
     chmod 777 /app/logs
 
-EXPOSE 5001 8003
+EXPOSE 5001
 
 # Use gunicorn as the entrypoint
 CMD ["gunicorn", "--config", "gunicorn_config.py", "app:application"]

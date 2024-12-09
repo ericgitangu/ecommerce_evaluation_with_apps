@@ -137,7 +137,7 @@ def create_app():
             conn.execute(text("SELECT 1"))
         logger.info("Database connection successful")
         
-        # Start metrics server - TODO: aren't we already using prometheus scraping?
+        # Start metrics server - TODO: Using metrics server with the service's metrics endpoint!
         # start_http_server(8003)
         # logger.info("Metrics server started on port 8003")
         

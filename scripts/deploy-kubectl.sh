@@ -75,6 +75,37 @@ wait_for_statefulset() {
 
 # Deploy core services (PostgreSQL, RabbitMQ)
 deploy_core_services() {
+    # Check if metrics server is already installed
+    if kubectl get deployment metrics-server -n kube-system >/dev/null 2>&1; then
+        log_info "Metrics server already installed ${TICK}"
+    else
+        # Deploy metrics server
+        log_info "Deploying metrics server..."
+        if ! kubectl apply -f https://github.com/kubernetes-sigs/metrics-server/releases/latest/download/components.yaml; then
+            log_error "Failed to deploy metrics server ${CROSS}"
+            exit 1
+        fi
+
+        # Patch metrics-server for Kind's self-signed certificates
+        kubectl patch deployment metrics-server \
+          -n kube-system \
+          --type=json \
+          -p '[{"op":"add","path":"/spec/template/spec/containers/0/args/-","value":"--kubelet-insecure-tls"}]'
+
+        # Wait for metrics-server to be ready
+        if ! kubectl wait --for=condition=available --timeout=90s deployment/metrics-server -n kube-system; then
+            log_warning "Metrics server not fully ready ${CROSS}"
+        else
+            log_success "Metrics server deployed successfully ${TICK}"
+        fi
+    fi
+
+    # Show metrics server status at the end
+    log_info "Metrics Server Status:"
+    kubectl get pods -n kube-system | grep metrics-server
+    kubectl top nodes || true
+    kubectl top pods -n ecommerce || true
+
     # Create secrets for each namespace
     for ns in database messaging ecommerce monitoring logging; do
         log_info "Creating secrets in $ns namespace..."
@@ -237,6 +268,14 @@ log_info "Current cluster status:"
 kubectl get pods -A
 kubectl get services -A
 kubectl get deployments -A
+
+log_info "Metrics Server Status:"
+echo "Metrics Server Pod:"
+kubectl get pods -n kube-system | grep metrics-server
+echo -e "\nNode Resource Usage:"
+kubectl top nodes || true
+echo -e "\nPod Resource Usage:"
+kubectl top pods -n ecommerce || true
 
 log_info "Services are available at:"
 echo "Core Services:"
