@@ -1,6 +1,6 @@
 # Gunicorn configuration
 bind = "0.0.0.0:5001"
-workers = 3
+workers = 1
 threads = 2
 worker_class = "sync"
 worker_connections = 1000

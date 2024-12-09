@@ -1,7 +1,7 @@
 import os
 import time
 from flask import Flask, jsonify, request
-from prometheus_client import start_http_server, Counter, Histogram, generate_latest, CONTENT_TYPE_LATEST
+from prometheus_client import Counter, Histogram, generate_latest, CONTENT_TYPE_LATEST
 from sqlalchemy import create_engine, MetaData, Table, Column, Integer, String, Float, text
 from sqlalchemy.exc import SQLAlchemyError
 from contextlib import contextmanager
@@ -137,9 +137,9 @@ def create_app():
             conn.execute(text("SELECT 1"))
         logger.info("Database connection successful")
         
-        # Start metrics server
-        start_http_server(8003)
-        logger.info("Metrics server started on port 8003")
+        # Start metrics server - TODO: aren't we already using prometheus scraping?
+        # start_http_server(8003)
+        # logger.info("Metrics server started on port 8003")
         
         return app
     except Exception as e:
