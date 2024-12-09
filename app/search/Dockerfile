@@ -14,6 +14,10 @@ COPY . /app/
 # Copy the utils folder
 COPY utils /app/utils/
 
+# Create logs directory
+RUN mkdir -p /app/logs && \
+    chmod 777 /app/logs
+
 # Expose the port
 EXPOSE 5002
 
