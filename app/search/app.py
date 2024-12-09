@@ -161,6 +161,13 @@ def health():
             "status": "unhealthy",
             "error": str(e)
         }), 500
+def create_app():
+    """Application factory function"""
+    logger.info("Creating app for Gunicorn: %s", 'search-service')
+    return app
+
+# For Gunicorn
+application = create_app()
 
 if __name__ == "__main__":
     # Initialize Elasticsearch index
@@ -170,4 +177,4 @@ if __name__ == "__main__":
     # start_http_server(8003)
     
     # Start Flask app
-    app.run(host="0.0.0.0", port=5002)
+    application.run(host="0.0.0.0", port=5002)

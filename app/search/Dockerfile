@@ -18,4 +18,4 @@ COPY utils /app/utils/
 EXPOSE 5002
 
 # Run the application
-CMD ["python3", "app.py"]
+CMD ["gunicorn", "--config", "gunicorn-config.py", "app:application"]

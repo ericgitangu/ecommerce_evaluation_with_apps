@@ -129,7 +129,7 @@ def metrics():
 
 def create_app():
     """Application factory function"""
-    logger.info("Creating app for Gunicorn: %s", app)
+    logger.info("Creating app for Gunicorn: %s", 'catalog-service')
     global engine
     try:
         # Initialize database connection

@@ -180,7 +180,7 @@ def health():
 
 def create_app():
     """Application factory function"""
-    logger.info("Creating app for Gunicorn: %s", app)
+    logger.info("Creating app for Gunicorn: %s", 'order-service')
     return app
 
 # For Gunicorn

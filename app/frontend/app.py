@@ -53,6 +53,14 @@ def health():
     logger.info("Health check request received for frontend service")
     return jsonify({"status": "healthy"}), 200
 
+def create_app():
+    """Application factory function"""
+    logger.info("Creating app for Gunicorn: %s", 'frontend-service')
+    return app
+
+# For Gunicorn
+application = create_app()
+
 if __name__ == "__main__":
     # Start Prometheus metrics server
     start_http_server(8003) # TODO: we are using metrics server with the service's metrics endpoint!
@@ -63,4 +71,4 @@ if __name__ == "__main__":
     rabbitmq_thread.start()
     
     # Start Flask app
-    app.run(host="0.0.0.0", port=5004)
+    application.run(host="0.0.0.0", port=5004)
