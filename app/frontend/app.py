@@ -1,7 +1,7 @@
 from flask import Flask, jsonify
 import pika
 import logging
-from prometheus_client import start_http_server, Counter, Histogram, register_metrics
+from prometheus_client import start_http_server, Counter, Histogram
 import time
 import os
 import sys
@@ -51,10 +51,14 @@ def health():
     logger.info("Health check request received for frontend service")
     return jsonify({"status": "healthy"}), 200
 
-# Prometheus metrics registration
-register_metrics(app, app_version="v1.0.0", app_config="production")
-
 if __name__ == "__main__":
-    start_http_server(8003)  # Expose metrics
-    poll_rabbitmq()
+    # Start Prometheus metrics server
+    start_http_server(8003)
+    
+    # Start RabbitMQ polling in a separate thread
+    import threading
+    rabbitmq_thread = threading.Thread(target=poll_rabbitmq, daemon=True)
+    rabbitmq_thread.start()
+    
+    # Start Flask app
     app.run(host="0.0.0.0", port=5004)
