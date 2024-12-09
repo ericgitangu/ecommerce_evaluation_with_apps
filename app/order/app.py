@@ -1,7 +1,7 @@
 from flask import Flask, jsonify, request
 import pika
 import psycopg2
-from prometheus_client import start_http_server, Counter, Histogram, register_metrics, CONTENT_TYPE_LATEST
+from prometheus_client import start_http_server, Counter, Histogram, generate_latest, CONTENT_TYPE_LATEST
 import os
 import logging
 import time
@@ -18,20 +18,35 @@ app = Flask(__name__)
 logger = setup_logger('order')
 
 # Metrics
-API_HITS = Counter('api_hits', 'API Hits', ['method', 'endpoint'])
-PROCESSING_TIME = Histogram('processing_time_seconds', 'Processing Time', ['endpoint'])
+REQUEST_COUNT = Counter(
+    'request_count', 'App Request Count',
+    ['app_name', 'method', 'endpoint', 'http_status']
+)
+REQUEST_LATENCY = Histogram(
+    'request_latency_seconds', 'Request latency',
+    ['app_name', 'endpoint']
+)
 
 # Database connection
-DATABASE_URL = os.getenv("DATABASE_URL", f"postgresql://{os.getenv('POSTGRES_USERNAME', 'postgres')}:{os.getenv('POSTGRES_PASSWORD', '')}@localhost:5432/postgres")
-db_connection = psycopg2.connect(DATABASE_URL)
+def get_db_connection():
+    return psycopg2.connect(
+        host=os.getenv('POSTGRES_HOST'),
+        port=os.getenv('POSTGRES_PORT', '5432'),
+        database=os.getenv('POSTGRES_DB'),
+        user=os.getenv('POSTGRES_USER'),
+        password=os.getenv('POSTGRES_PASSWORD')
+    )
 
-# RabbitMQ connection
+# RabbitMQ connection parameters
 RABBITMQ_HOST = os.getenv('RABBITMQ_HOST', 'rabbitmq')
+RABBITMQ_USER = os.getenv('RABBITMQ_USERNAME', 'guest')
+RABBITMQ_PASS = os.getenv('RABBITMQ_PASSWORD', 'guest')
 
-# Add this function to initialize the database
 def init_db():
+    """Initialize the database with required tables"""
     try:
-        with db_connection.cursor() as cursor:
+        conn = get_db_connection()
+        with conn.cursor() as cursor:
             cursor.execute("""
                 CREATE TABLE IF NOT EXISTS orders (
                     id SERIAL PRIMARY KEY,
@@ -41,121 +56,69 @@ def init_db():
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                 );
             """)
-        db_connection.commit()
-        logging.info("Database initialized successfully")
+        conn.commit()
+        conn.close()
+        logger.info("Database initialized successfully")
     except Exception as e:
-        logging.error(f"Error initializing database: {str(e)}")
+        logger.error(f"Error initializing database: {str(e)}")
         raise
 
-# Publish to RabbitMQ
 def publish_to_queue(message):
+    """Publish message to RabbitMQ"""
     try:
-        connection = pika.BlockingConnection(pika.ConnectionParameters(host=RABBITMQ_HOST))
+        credentials = pika.PlainCredentials(RABBITMQ_USER, RABBITMQ_PASS)
+        connection = pika.BlockingConnection(
+            pika.ConnectionParameters(
+                host=RABBITMQ_HOST,
+                credentials=credentials,
+                connection_attempts=3,
+                retry_delay=5
+            )
+        )
         channel = connection.channel()
-        channel.queue_declare(queue='orders')
+        channel.queue_declare(queue='orders', durable=True)
         channel.basic_publish(
             exchange='',
             routing_key='orders',
-            body=message
+            body=message,
+            properties=pika.BasicProperties(delivery_mode=2)
         )
         logger.info(f"Published message to orders queue: {message}")
         connection.close()
     except Exception as e:
         logger.error(f"Error publishing to RabbitMQ: {str(e)}")
+        raise
 
 @app.route('/')
 def home():
+    """Home endpoint"""
     start_time = time.time()
-    API_HITS.labels(method='GET', endpoint='/').inc()
-    PROCESSING_TIME.labels(endpoint='/').observe(time.time() - start_time)
+    REQUEST_COUNT.labels(app_name='order', method='GET', endpoint='/', http_status=200).inc()
+    REQUEST_LATENCY.labels(app_name='order', endpoint='/').observe(time.time() - start_time)
     return jsonify({"message": "Order Service Running"}), 200
 
-@app.route('/create-order', methods=['POST'])
-def create_order():
-    logger.info("Received new order request")
-    start_time = time.time()
-    API_HITS.labels(method='POST', endpoint='/create-order').inc()
-    
-    try:
-        data = request.json
-        if not data or not all(k in data for k in ["order_id", "product", "quantity"]):
-            logger.warning("Invalid order request - missing required fields")
-            return jsonify({"status": "error", "message": "Missing required fields"}), 400
-        
-        if not isinstance(data["quantity"], int) or data["quantity"] <= 0:
-            return jsonify({"status": "error", "message": "Invalid quantity"}), 400
-
-        # Publish message to RabbitMQ
-        connection = None
-        try:
-            connection = pika.BlockingConnection(pika.ConnectionParameters(
-                host=RABBITMQ_HOST,
-                connection_attempts=3,
-                retry_delay=5
-            ))
-            channel = connection.channel()
-            channel.queue_declare(queue='orders', durable=True)  # Make queue durable
-            channel.basic_publish(
-                exchange='',
-                routing_key='orders',
-                body=str(data),
-                properties=pika.BasicProperties(delivery_mode=2)  # Make message persistent
-            )
-        finally:
-            if connection and not connection.is_closed:
-                connection.close()
-
-        # Insert order into PostgreSQL
-        with db_connection.cursor() as cursor:
-            cursor.execute(
-                "INSERT INTO orders (order_id, product, quantity) VALUES (%s, %s, %s)",
-                (data["order_id"], data["product"], data["quantity"])
-            )
-        db_connection.commit()
-
-        PROCESSING_TIME.labels(endpoint='/create-order').observe(time.time() - start_time)
-        logger.info(f"Order {data['order_id']} processed successfully")
-        return jsonify({"status": "success", "message": "order created"}), 201
-
-    except psycopg2.Error as e:
-        db_connection.rollback()
-        logging.error(f"Database error: {str(e)}")
-        return jsonify({"status": "error", "message": "Database error occurred"}), 500
-    except pika.exceptions.AMQPError as e:
-        logging.error(f"RabbitMQ error: {str(e)}")
-        return jsonify({"status": "error", "message": "Message queue error occurred"}), 500
-    except Exception as e:
-        logger.error(f"Error processing order: {str(e)}")
-        return jsonify({"status": "error", "message": "An unexpected error occurred"}), 500
-
-@app.route('/metrics')
-def metrics():
-    from prometheus_client import generate_latest
-    logger.info("Metrics request received for order service")
-    return generate_latest(), 200, {'Content-Type': CONTENT_TYPE_LATEST}
-
-@app.route('/health')
-def health():
-    logger.info("Health check request received for order service")
-    return jsonify({"status": "healthy"}), 200
-
-# Add a new endpoint to create orders that will publish messages
 @app.route('/order', methods=['POST'])
 def create_order():
+    """Create a new order"""
     start_time = time.time()
-    API_HITS.labels(method='POST', endpoint='/order').inc()
     
     try:
         data = request.get_json()
+        if not data or not all(k in data for k in ["product", "quantity"]):
+            REQUEST_COUNT.labels(app_name='order', method='POST', endpoint='/order', http_status=400).inc()
+            return jsonify({"error": "Missing required fields"}), 400
+
         order_id = str(uuid.uuid4())
         
         # Store in database
-        with db_connection.cursor() as cursor:
+        conn = get_db_connection()
+        with conn.cursor() as cursor:
             cursor.execute(
                 "INSERT INTO orders (order_id, product, quantity) VALUES (%s, %s, %s)",
                 (order_id, data['product'], data['quantity'])
             )
-        db_connection.commit()
+        conn.commit()
+        conn.close()
         
         # Publish to RabbitMQ
         message = json.dumps({
@@ -166,17 +129,60 @@ def create_order():
         })
         publish_to_queue(message)
         
-        PROCESSING_TIME.labels(endpoint='/order').observe(time.time() - start_time)
+        REQUEST_LATENCY.labels(app_name='order', endpoint='/order').observe(time.time() - start_time)
+        REQUEST_COUNT.labels(app_name='order', method='POST', endpoint='/order', http_status=201).inc()
         return jsonify({"order_id": order_id, "status": "created"}), 201
         
     except Exception as e:
         logger.error(f"Error creating order: {str(e)}")
+        REQUEST_COUNT.labels(app_name='order', method='POST', endpoint='/order', http_status=500).inc()
         return jsonify({"error": "Failed to create order"}), 500
 
-# Prometheus metrics registration
-register_metrics(app, app_version="v1.0.0", app_config="production")
+@app.route('/metrics')
+def metrics():
+    """Metrics endpoint for Prometheus"""
+    return generate_latest(), 200, {'Content-Type': CONTENT_TYPE_LATEST}
+
+@app.route('/health')
+def health():
+    """Health check endpoint"""
+    try:
+        # Test database connection
+        conn = get_db_connection()
+        with conn.cursor() as cursor:
+            cursor.execute('SELECT 1')
+        conn.close()
+        
+        # Test RabbitMQ connection
+        credentials = pika.PlainCredentials(RABBITMQ_USER, RABBITMQ_PASS)
+        connection = pika.BlockingConnection(
+            pika.ConnectionParameters(
+                host=RABBITMQ_HOST,
+                credentials=credentials,
+                connection_attempts=1,
+                socket_timeout=1
+            )
+        )
+        connection.close()
+        
+        return jsonify({
+            "status": "healthy",
+            "database": "connected",
+            "message_queue": "connected"
+        }), 200
+    except Exception as e:
+        logger.error(f"Health check failed: {str(e)}")
+        return jsonify({
+            "status": "unhealthy",
+            "error": str(e)
+        }), 500
 
 if __name__ == "__main__":
-    init_db()  # Initialize database before starting the server
-    start_http_server(8003) # Expose metrics
+    # Initialize database
+    init_db()
+    
+    # Start metrics server
+    start_http_server(8003)
+    
+    # Start Flask app
     app.run(host="0.0.0.0", port=5003)

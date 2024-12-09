@@ -1,9 +1,8 @@
 import os
 import time
 from flask import Flask, jsonify, request
-from flask_prometheus_metrics import register_metrics, start_http_server, CONTENT_TYPE_LATEST
+from prometheus_client import start_http_server, Counter, Histogram, generate_latest, CONTENT_TYPE_LATEST
 from sqlalchemy import create_engine, MetaData, Table, Column, Integer, String, Float
-from sqlalchemy.exc import OperationalError
 from contextlib import contextmanager
 from sqlalchemy.sql import text
 import os
@@ -14,12 +13,22 @@ from utils.logger import setup_logger
 # Flask app initialization
 app = Flask(__name__)
 
+# Metrics
+REQUEST_COUNT = Counter(
+    'request_count', 'App Request Count',
+    ['app_name', 'method', 'endpoint', 'http_status']
+)
+REQUEST_LATENCY = Histogram(
+    'request_latency_seconds', 'Request latency',
+    ['app_name', 'endpoint']
+)
+
 # Logging setup
 logger = setup_logger('catalog')
 logger.info("Catalog service starting up")
 
 # Read environment variables
-DATABASE_URL = os.getenv("DATABASE_URL", f"postgresql://{os.getenv('POSTGRES_USERNAME', 'postgres')}:{os.getenv('POSTGRES_PASSWORD', '')}@localhost:5432/postgres")
+DATABASE_URL = os.getenv("DATABASE_URL", f"postgresql://{os.getenv('POSTGRES_USER')}:{os.getenv('POSTGRES_PASSWORD')}@{os.getenv('POSTGRES_HOST')}:{os.getenv('POSTGRES_PORT', '5432')}/postgres")
 DB_TIMEOUT = int(os.getenv("DB_TIMEOUT", 5))  # Timeout for health check queries
 
 # SQLAlchemy setup
@@ -147,19 +156,16 @@ def health():
             "database": "disconnected"
         }), 500
 
-@app.route('/metrics', methods=['GET'])
+@app.route('/metrics')
 def metrics():
     """
     Metrics endpoint for Prometheus.
-    Returns actual metrics in Prometheus format.
     """
-    from prometheus_client import generate_latest
     return generate_latest(), 200, {'Content-Type': CONTENT_TYPE_LATEST}
-
-# Prometheus metrics registration
-register_metrics(app, app_version="v1.0.0", app_config="production")
 
 # Flask app execution
 if __name__ == "__main__":
-    start_http_server(8003)  # Expose metrics
+    # Start the metrics server on a different port
+    start_http_server(8003)
+    # Start the Flask app
     app.run(host="0.0.0.0", port=5001)
