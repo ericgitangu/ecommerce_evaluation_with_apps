@@ -201,7 +201,35 @@ def metrics():
 
 # Flask app execution
 if __name__ == "__main__":
-    # Start the metrics server on a different port
+    # Start the metrics server
     start_http_server(8003)
-    # Start the Flask app
-    app.run(host="0.0.0.0", port=5001)
+    
+    # Configure Gunicorn options
+    options = {
+        'bind': '0.0.0.0:5001',
+        'workers': 3,
+        'timeout': 120,
+        'worker_class': 'sync',
+        'keepalive': 5,
+        'accesslog': '-',
+        'errorlog': '-',
+        'loglevel': 'info',
+    }
+    
+    # Start Gunicorn
+    from gunicorn.app.base import BaseApplication
+
+    class GunicornApp(BaseApplication):
+        def __init__(self, app, options=None):
+            self.options = options or {}
+            self.application = app
+            super().__init__()
+
+        def load_config(self):
+            for key, value in self.options.items():
+                self.cfg.set(key, value)
+
+        def load(self):
+            return self.application
+
+    GunicornApp(app, options).run()
