@@ -2,9 +2,11 @@ import logging
 import os
 from logging.handlers import RotatingFileHandler
 
+parent_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
 def setup_logger(service_name):
     # Create logs directory if it doesn't exist
-    log_dir = f"logs_and_metrics/{service_name}"
+    log_dir = f"{parent_dir}/logs_and_metrics/{service_name}"
     os.makedirs(log_dir, exist_ok=True)
 
     # Create logger

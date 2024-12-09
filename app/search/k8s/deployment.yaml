@@ -59,6 +59,9 @@ spec:
             periodSeconds: 20
             timeoutSeconds: 5
             failureThreshold: 3
+          volumeMounts:
+            - name: logs-and-metrics
+              mountPath: /app/logs
       volumes:
         - name: logs-and-metrics
           emptyDir: {}

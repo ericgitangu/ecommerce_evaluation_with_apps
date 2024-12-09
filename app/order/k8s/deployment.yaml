@@ -3,6 +3,8 @@ kind: Deployment
 metadata:
   name: order-service
   namespace: ecommerce
+  labels:
+    app: order-service
 spec:
   replicas: 1
   selector:
@@ -45,6 +47,27 @@ spec:
               memory: "128Mi"
               cpu: "250m"
           env:
+            - name: RABBITMQ_HOST
+              value: "rabbitmq.messaging.svc.cluster.local"
+            - name: POSTGRES_HOST
+              value: "postgres.database.svc.cluster.local"
+            - name: POSTGRES_PORT
+              value: "5432"
+            - name: POSTGRES_DB
+              valueFrom:
+                secretKeyRef:
+                  name: service-secrets
+                  key: postgres-database
+            - name: POSTGRES_USER
+              valueFrom:
+                secretKeyRef:
+                  name: service-secrets
+                  key: postgres-username
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: service-secrets
+                  key: postgres-password
             - name: RABBITMQ_USERNAME
               valueFrom:
                 secretKeyRef:
@@ -55,16 +78,9 @@ spec:
                 secretKeyRef:
                   name: service-secrets
                   key: rabbitmq-password
-            - name: POSTGRES_USERNAME
-              valueFrom:
-                secretKeyRef:
-                  name: service-secrets
-                  key: postgres-username
-            - name: POSTGRES_PASSWORD
-              valueFrom:
-                secretKeyRef:
-                  name: service-secrets
-                  key: postgres-password
+          volumeMounts:
+            - name: logs-and-metrics
+              mountPath: /app/logs
       volumes:
         - name: logs-and-metrics
           emptyDir: {}
