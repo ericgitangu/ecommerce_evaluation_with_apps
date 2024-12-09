@@ -134,6 +134,29 @@ if ! load_images_to_kind; then
     exit 1
 fi
 
+install_metrics_server() {
+    log_info "Installing metrics server..."
+    kubectl apply -f https://github.com/kubernetes-sigs/metrics-server/releases/latest/download/components.yaml
+
+    # Patch metrics-server to work with Kind's self-signed certificates
+    kubectl patch deployment metrics-server \
+      -n kube-system \
+      --type=json \
+      -p '[{"op":"add","path":"/spec/template/spec/containers/0/args/-","value":"--kubelet-insecure-tls"}]'
+
+    # Wait for metrics-server to be ready
+    if kubectl wait --for=condition=available --timeout=90s deployment/metrics-server -n kube-system; then
+        log_success "Metrics server installed successfully ${TICK}"
+    else
+        log_warning "Metrics server installation incomplete ${CROSS}"
+    fi
+}
+
+# Add this call after cluster creation but before deploying services
+if ! install_metrics_server; then
+    log_warning "Metrics server installation failed - HPA may not work properly ${CROSS}"
+fi
+
 log_info "Deploying services..."
 ./scripts/deploy-helm.sh
 ./scripts/deploy-kubectl.sh

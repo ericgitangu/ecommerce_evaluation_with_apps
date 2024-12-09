@@ -50,6 +50,15 @@ deploy_application_services() {
         kubectl apply -f app/$service/k8s/hpa.yaml
         
         log_info "Waiting for $service service..."
+
+        if ! check_service_readiness $service; then
+            log_error "${service} service failed readiness check ${CROSS}"
+            # Show detailed debugging information
+            kubectl describe pods -n ecommerce -l app=${service}-service
+            kubectl logs -n ecommerce -l app=${service}-service --tail=50
+            return 1
+        fi
+
         if ! kubectl rollout status deployment/${service}-service -n ecommerce --timeout=180s; then
             log_error "${service} service deployment failed ${CROSS}"
             
@@ -255,4 +264,28 @@ check_pod_status() {
     
     log_success "Pod for ${service} is running and ready ${TICK}"
     return 0
+}
+
+check_service_readiness() {
+    local service=$1
+    local max_retries=30
+    local retry_count=0
+    
+    while [ $retry_count -lt $max_retries ]; do
+        if kubectl get pods -n ecommerce -l app=${service}-service -o jsonpath='{.items[0].status.containerStatuses[0].ready}' | grep -q "true"; then
+            log_success "${service} service is ready ${TICK}"
+            return 0
+        fi
+        
+        retry_count=$((retry_count + 1))
+        log_info "Waiting for ${service} service to be ready... (attempt $retry_count/$max_retries)"
+        
+        # Show recent logs
+        kubectl logs -n ecommerce -l app=${service}-service --tail=20 || true
+        
+        sleep 10
+    done
+    
+    log_error "${service} service failed to become ready ${CROSS}"
+    return 1
 }
