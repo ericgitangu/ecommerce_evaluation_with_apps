@@ -50,7 +50,7 @@ spec:
             - name: RABBITMQ_HOST
               value: "rabbitmq.messaging.svc.cluster.local"
             - name: POSTGRES_HOST
-              value: "postgres.database.svc.cluster.local"
+              value: "postgres-postgresql.database.svc.cluster.local"
             - name: POSTGRES_PORT
               value: "5432"
             - name: POSTGRES_DB

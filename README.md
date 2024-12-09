@@ -255,7 +255,7 @@ This project implements an e-commerce system using a microservices architecture.
 
 #### PostgreSQL
 - **Port**: 5432
-- **Internal Service Name**: postgres.database.svc.cluster.local
+- **Internal Service Name**: postgres-postgresql.database.svc.cluster.local
 - **Access**: localhost:5432
 - **Default Credentials**: postgres/postgrespass
 
