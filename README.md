@@ -6,7 +6,8 @@ This project implements an e-commerce system using a microservices architecture.
 
 ## Achievements:
 
-As per the requirements, the following have been achieved
+As per the requirements, the following have been achieved, all works have been cited within the relevant manifest files
+
 1. Debug and deploy the services using provided manifests - each service and 3rd party app has its own manifests files within folders named k8s.
 2. Address issues in the CI/CD pipeline - set up an automated CI/CD pipeline which is passing, click on the badge for more information.
 3. Use logs and metrics to identify and fix issues - using prometheus, integrated grafana and local logs mounted on containers (git excluded for security).
