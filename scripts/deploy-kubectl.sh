@@ -23,17 +23,8 @@ DEPLOY_MONITORING=${DEPLOY_MONITORING:-true}
 DEPLOY_LOGGING=${DEPLOY_LOGGING:-true}
 
 deploy_core_services() {
-    # 1. Deploy Core Database
-    log_info "Deploying PostgreSQL..."
-    kubectl apply -f postgres/k8s/deployment.yaml -n database
-    kubectl apply -f postgres/k8s/service.yaml -n database
-    log_info "Waiting for PostgreSQL..."
-    if ! kubectl rollout status deployment/postgres -n database --timeout=300s; then
-        log_error "PostgreSQL deployment failed ${CROSS}"
-        kubectl describe deployment postgres -n database
-        return 1
-    fi
-    log_success "PostgreSQL deployed successfully ${TICK}"
+    # PostgreSQL is handled by Helm in deploy-helm.sh
+    log_info "Skipping PostgreSQL deployment (handled by Helm) ${TICK}"
 
     # 2. Deploy Message Broker
     log_info "Deploying RabbitMQ..."
