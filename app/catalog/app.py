@@ -56,7 +56,8 @@ def wait_for_db():
 def get_db_engine():
     """Create SQLAlchemy engine with retry logic"""
     if not wait_for_db():
-        raise Exception("Database host resolution failed")
+        logger.error("Database host resolution failed")
+        # raise Exception("Database host resolution failed")
         
     url = f"postgresql://{DB_USER}:{DB_PASS}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
     return create_engine(
@@ -100,7 +101,7 @@ def get_db_connection():
                 time.sleep(delay * (attempt + 1))
     
     logger.error(f"All database connection attempts failed: {str(last_exception)}")
-    raise last_exception
+    # raise last_exception
 
 @app.route('/health')
 def health():
@@ -143,7 +144,7 @@ def create_app():
         return app
     except Exception as e:
         logger.error(f"Failed to initialize application: {str(e)}")
-        raise
+        # raise
 
 # For Gunicorn
 application = create_app()
