@@ -19,4 +19,4 @@ COPY . /app/
 EXPOSE 5003
 
 # Run the application
-CMD ["gunicorn", "--config", "gunicorn_config.py", "app:application"]
+CMD ["gunicorn", "--config", "gunicorn-config.py", "app:application"]

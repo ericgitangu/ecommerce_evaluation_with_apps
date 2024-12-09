@@ -22,4 +22,4 @@ RUN mkdir -p /app/logs && \
 EXPOSE 5001
 
 # Use gunicorn as the entrypoint
-CMD ["gunicorn", "--config", "gunicorn_config.py", "app:application"]
+CMD ["gunicorn", "--config", "gunicorn-config.py", "app:application"]
