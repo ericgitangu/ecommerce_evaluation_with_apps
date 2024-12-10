@@ -25,29 +25,55 @@ As per the requirements, the following have been achieved, all works have been c
 │   │   ├── app.py
 │   │   ├── data
 │   │   │   └── catalogue_data.json
-│   │   └── requirements.txt
+│   │   ├── gunicorn-config.py
+│   │   ├── k8s
+│   │   │   ├── deployment.yaml
+│   │   │   ├── hpa.yaml
+│   │   │   └── service.yaml
+│   │   ├── requirements.txt
+│   │   └── utils
+│   │       ├── __init__.py
+│   │       └── logger.py
 │   ├── frontend
 │   │   ├── Dockerfile
 │   │   ├── app.py
+│   │   ├── gunicorn-config.py
 │   │   ├── k8s
 │   │   │   ├── deployment.yaml
 │   │   │   ├── hpa.yaml
 │   │   │   └── service.yaml
-│   │   └── requirements.txt
+│   │   ├── requirements.txt
+│   │   └── utils
+│   │       ├── __init__.py
+│   │       └── logger.py
 │   ├── order
 │   │   ├── Dockerfile
 │   │   ├── app.py
+│   │   ├── gunicorn-config.py
 │   │   ├── k8s
 │   │   │   ├── deployment.yaml
 │   │   │   ├── hpa.yaml
 │   │   │   └── service.yaml
-│   │   └── requirements.txt
+│   │   ├── requirements.txt
+│   │   └── utils
+│   │       ├── __init__.py
+│   │       └── logger.py
 │   └── search
 │       ├── Dockerfile
 │       ├── app.py
 │       ├── data
 │       │   └── search_data.json
-│       └── requirements.txt
+│       ├── gunicorn-config.py
+│       ├── k8s
+│       │   ├── deployment.yaml
+│       │   ├── hpa.yaml
+│       │   └── service.yaml
+│       ├── requirements.txt
+│       └── utils
+│           ├── __init__.py
+│           └── logger.py
+├── ci_cd
+│   └── README.md
 ├── elasticsearch
 │   └── k8s
 │       ├── deployment.yaml
@@ -56,10 +82,31 @@ As per the requirements, the following have been achieved, all works have been c
 │   ├── dashboards
 │   │   └── flask-services.json
 │   └── k8s
+│       ├── dashboard-provisioning.yaml
+│       ├── datasource.yaml
 │       ├── deployment.yaml
 │       └── service.yaml
+├── istio
+│   └── k8s
+│       ├── auth-policy.yaml
+│       ├── deployment.yaml
+│       ├── mesh-config.yaml
+│       └── service.yaml
+├── kind
+│   └── k8s
+│       ├── kind-config.yaml
+│       └── storage-class.yaml
 ├── logs_and_metrics
+│   ├── catalog
+│   ├── frontend
+│   ├── order
+│   └── search
 ├── manifests
+│   └── README.md
+├── nginx
+│   └── k8s
+│       ├── deployment.yaml
+│       └── service.yaml
 ├── postgres
 │   └── k8s
 │       ├── deployment.yaml
@@ -75,9 +122,11 @@ As per the requirements, the following have been achieved, all works have been c
 │   └── k8s
 │       ├── deployment.yaml
 │       └── service.yaml
-└── scripts
-    ├── deploy-helm.sh
-    └── deploy-kubectl.sh
+├── scripts
+│   ├── deploy-helm.sh
+│   ├── deploy-kubectl.sh
+│   └── test-local.sh
+└── secrets.yaml
 ```
 
 
