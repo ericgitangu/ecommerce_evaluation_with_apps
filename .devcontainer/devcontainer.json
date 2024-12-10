@@ -6,10 +6,18 @@
   },
   "workspaceFolder": "/workspace/${localWorkspaceFolderBasename}",
   "features": {
-    "ghcr.io/devcontainers/features/docker-in-docker:2": {}
+    "ghcr.io/devcontainers/features/docker-in-docker:2": {
+      "version": "latest",
+      "moby": true,
+      "dockerDashComposeVersion": "v2"
+    }
   },
   "runArgs": [
-    "--privileged"
+    "--privileged",
+    "--cap-add=NET_ADMIN",
+    "--cap-add=NET_RAW",
+    "--security-opt",
+    "seccomp=unconfined"
   ],
   "customizations": {
     "vscode": {
@@ -46,5 +54,5 @@
   ],
   "remoteUser": "vscode",
   "containerUser": "vscode",
-  "postCreateCommand": "bash -c 'sudo apt-get update && sudo apt-get install -y libpq-dev'"
+  "postCreateCommand": "bash -c 'sudo apt-get update && sudo apt-get install -y libpq-dev iptables'"
 }
