@@ -25,19 +25,10 @@
         "ms-python.python",
         "ms-python.isort",
         "ms-azuretools.vscode-docker",
-        "dbaeumer.vscode-eslint",
-        "Shopify.ruby-lsp",
-        "rust-lang.rust-analyzer",
-        "Prisma.prisma",
-        "ms-vscode.vscode-typescript-next",
         "esbenp.prettier-vscode",
         "eamodio.gitlens",
         "mhutchie.git-graph",
-        "oderwat.indent-rainbow",
-        "ms-kubernetes-tools.vscode-kubernetes-tools",
-        "redhat.vscode-yaml",
-        "bradlc.vscode-tailwindcss",
-        "mui.material-ui-snippets"
+        "ms-kubernetes-tools.vscode-kubernetes-tools"
       ]
     }
   },
