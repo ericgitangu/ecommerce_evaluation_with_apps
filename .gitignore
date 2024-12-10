@@ -1,7 +1,8 @@
 # Logs
 logs
-logs_and_metrics/*
-!logs_and_metrics/.gitkeep
+# TODO: Uncomment these in production - we don't want to commit logs to the repo in production.
+# logs_and_metrics/*
+# !logs_and_metrics/.gitkeep
 *.log
 npm-debug.log*
 yarn-debug.log*
