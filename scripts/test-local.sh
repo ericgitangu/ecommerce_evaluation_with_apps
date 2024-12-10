@@ -110,6 +110,7 @@ if [ ! -f "kind/k8s/kind-config.yaml" ]; then
     # exit 1
 fi
 
+# Attempt to create cluster traditionally
 if kind create cluster \
     --config kind/k8s/kind-config.yaml \
     --name egitangu-local-cluster \
@@ -117,8 +118,29 @@ if kind create cluster \
     --wait 60s; then
     log_success "Kind cluster created successfully ${TICK}"
 else
-    log_error "Failed to create Kind cluster ${CROSS}"
-    # exit 1
+    log_warning "Traditional cluster creation failed, trying experimental approach..."
+    
+    # Create docker network for Kind with IPv4 only (suppress errors if network exists)
+    docker network create -d bridge \
+        -o "com.docker.network.bridge.enable_ip_masquerade=true" \
+        -o "com.docker.network.driver.mtu=1500" \
+        --subnet=172.18.0.0/16 \
+        kind 2>/dev/null || true
+
+    # Try experimental way
+    export KIND_EXPERIMENTAL_PROVIDER=docker
+    if KIND_EXPERIMENTAL_DOCKER_NETWORK=kind \
+       DOCKER_DEFAULT_PLATFORM=linux/amd64 \
+       kind create cluster \
+        --config kind/k8s/kind-config.yaml \
+        --name egitangu-local-cluster \
+        --image kindest/node:v1.28.0 \
+        --wait 60s; then
+        log_success "Kind cluster created successfully using experimental approach ${TICK}"
+    else
+        log_error "Failed to create Kind cluster using both approaches ${CROSS}"
+        exit 1
+    fi
 fi
 
 # Verify cluster is ready
