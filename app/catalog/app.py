@@ -1,6 +1,5 @@
 import os
 import time
-from app.frontend.app import API_HITS, PROCESSING_TIME
 from flask import Flask, jsonify
 from prometheus_client import Counter, Histogram, generate_latest, CONTENT_TYPE_LATEST
 from sqlalchemy import create_engine, text
@@ -138,9 +137,6 @@ def index():
     Index endpoint
     """
     logger.info("Index endpoint called - catalog service")
-    start_time = time.time()
-    API_HITS.labels(method='GET', endpoint='/').inc()
-    PROCESSING_TIME.labels(endpoint='/').observe(time.time() - start_time)
     return jsonify({
         "message": "Catalog Service Running!"
     }), 200
