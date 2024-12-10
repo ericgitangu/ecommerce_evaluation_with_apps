@@ -141,31 +141,37 @@ fi
 load_images_to_kind() {
     log_info "Loading Docker images into Kind..."
     for service in order catalog search frontend; do
+        # Try building locally first
         log_info "Building $service service..."
         if docker build -t egitangu/$service-service:latest -f app/$service/Dockerfile app/$service; then
-            log_success "Built $service image ${TICK}"
-            
-            # Load into Kind cluster
-            if kind load docker-image egitangu/$service-service:latest --name egitangu-local-cluster; then
-                log_success "Loaded $service image into cluster ${TICK}"
-                
-                # Verify image is available in the cluster
-                if crictl -r unix:///var/run/containerd/containerd.sock images | grep "egitangu/$service-service" >/dev/null 2>&1; then
-                    log_success "Verified $service image in cluster ${TICK}"
-                else
-                    # Alternative verification using docker
-                    if docker exec egitangu-local-cluster-control-plane crictl images | grep "egitangu/$service-service" >/dev/null 2>&1; then
-                        log_success "Verified $service image in cluster ${TICK}"
-                    else
-                        log_warning "Image verification skipped (continuing anyway) ${YELLOW}⚠${NC}"
-                    fi
-                fi
+            log_success "Built $service image locally ${TICK}"
+        else
+            log_warning "Failed to build $service locally, trying DockerHub..."
+            # Pull from DockerHub if local build fails
+            if docker pull egitangu/$service-service:latest; then
+                log_success "Pulled $service image from DockerHub ${TICK}"
             else
-                log_error "Failed to load $service image ${CROSS}"
+                log_error "Failed to get $service image locally or from DockerHub ${CROSS}"
                 return 1
             fi
+        fi
+        
+        # Load into Kind cluster (whether local or pulled)
+        if kind load docker-image egitangu/$service-service:latest --name egitangu-local-cluster; then
+            log_success "Loaded $service image into cluster ${TICK}"
+            
+            # Verify image is available
+            if crictl -r unix:///var/run/containerd/containerd.sock images | grep "egitangu/$service-service" >/dev/null 2>&1; then
+                log_success "Verified $service image in cluster ${TICK}"
+            else
+                if docker exec egitangu-local-cluster-control-plane crictl images | grep "egitangu/$service-service" >/dev/null 2>&1; then
+                    log_success "Verified $service image in cluster ${TICK}"
+                else
+                    log_warning "Image verification skipped (continuing anyway) ${YELLOW}⚠${NC}"
+                fi
+            fi
         else
-            log_error "Failed to build $service image ${CROSS}"
+            log_error "Failed to load $service image ${CROSS}"
             return 1
         fi
     done
